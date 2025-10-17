@@ -163,12 +163,25 @@ export default function UploadWebinar() {
       const chatMessages = []
 
       for (const row of chatData) {
-        const email = row.Email?.toLowerCase().trim()
-        if (!email || !emailToIdMap.has(email)) continue
+        const email = (row.email || row.Email)?.toLowerCase().trim()
 
+        if (!email) {
+          console.warn('Chat row missing email:', row)
+          unmatchedChats++
+          continue
+        }
+
+        if (!emailToIdMap.has(email)) {
+          console.warn('Chat email not found in attendees:', email)
+          unmatchedChats++
+          continue
+        }
+
+        matchedChats++
         const attendeeId = emailToIdMap.get(email)
-        const message = row.Message || row.Chat || ''
-        const isQuestion = message.includes('?')
+        const message = row.message || row.Message || row.Chat || ''
+        const isQuestionValue = row['is question?'] || row['is question'] || row.is_question || ''
+        const isQuestion = isQuestionValue.toString().toUpperCase() === 'TRUE' || message.includes('?')
 
         messageCounts.set(attendeeId, (messageCounts.get(attendeeId) || 0) + 1)
         if (isQuestion) {
@@ -178,10 +191,13 @@ export default function UploadWebinar() {
         chatMessages.push({
           attendee_id: attendeeId,
           message_text: message,
-          timestamp: row.Timestamp ? new Date(row.Timestamp) : new Date(),
+          timestamp: row['Date and time'] || row.Timestamp || row.timestamp ? new Date(row['Date and time'] || row.Timestamp || row.timestamp) : new Date(),
           is_question: isQuestion,
         })
       }
+
+      console.log(`Chat matching: ${matchedChats} matched, ${unmatchedChats} unmatched`)
+      console.log('Chat messages to insert:', chatMessages.length)
 
       if (chatMessages.length > 0) {
         const { error: chatError } = await supabase
