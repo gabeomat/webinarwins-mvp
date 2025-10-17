@@ -36,7 +36,7 @@ export default function Dashboard() {
   const handleDelete = async (webinarId, e) => {
     e.stopPropagation()
 
-    if (!confirm('Are you sure you want to delete this webinar? This will also delete all attendees and chat messages.')) {
+    if (!confirm('Are you sure you want to delete this webinar? This will automatically delete all associated attendees, chat messages, and generated emails.')) {
       return
     }
 
