@@ -72,16 +72,32 @@ export default function GeneratedEmails() {
     setGenerationStatus(null)
 
     try {
-      const apiUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/webinars/${id}/generate-emails${regenerate ? '?regenerate=true' : ''}`
+      const { data: { session } } = await supabase.auth.getSession()
 
-      const response = await fetch(apiUrl, {
+      if (!session) {
+        throw new Error('Not authenticated')
+      }
+
+      const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-emails`
+      const params = new URLSearchParams({
+        webinar_id: id,
+        ...(regenerate && { regenerate: 'true' })
+      })
+
+      const response = await fetch(`${functionUrl}?${params}`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         }
       })
 
       const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to generate emails')
+      }
+
       setGenerationStatus(result)
 
       if (result.status === 'completed' || result.status === 'partial_success') {
