@@ -88,14 +88,28 @@ export default function GeneratedEmails() {
 
       const result = await response.json()
 
+      console.log('=== EDGE FUNCTION RESPONSE ===')
+      console.log('Status Code:', response.status)
+      console.log('Response:', result)
+      console.log('============================')
+
       if (!response.ok) {
-        throw new Error(result.error || `Server error: ${response.status}`)
+        if (result.error && result.error.includes('OpenAI API key')) {
+          throw new Error('OpenAI API key not configured in Supabase Edge Functions. Please add OPENAI_API_KEY to your Supabase project settings.')
+        }
+        throw new Error(result.error || result.message || `Server error: ${response.status}`)
       }
 
       setGenerationStatus({
         ...result,
         status: result.status || 'completed'
       })
+
+      console.log('=== EMAIL GENERATION RESULT ===')
+      console.log('Status:', result.status)
+      console.log('Message:', result.message)
+      console.log('Details:', result.details)
+      console.log('==============================')
 
       if (result.status === 'completed' || result.status === 'partial_success') {
         await fetchEmails()
@@ -114,6 +128,23 @@ export default function GeneratedEmails() {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text)
     alert('Copied to clipboard!')
+  }
+
+  const setSelectedEmailWithLogging = (email) => {
+    if (email) {
+      console.log('=== EMAIL DIAGNOSTIC DATA ===')
+      console.log('Full Email Object:', email)
+      console.log('Personalization Elements:', email.personalization_elements)
+      if (email.personalization_elements?.ai_selection_info) {
+        console.log('AI Selection Info:', email.personalization_elements.ai_selection_info)
+        console.log('Tokens Consumed:', email.personalization_elements.tokens_consumed)
+        console.log('Model Used:', email.personalization_elements.ai_selection_info.model_used)
+      } else {
+        console.warn('⚠️ NO AI METADATA FOUND - OpenAI may not have been called!')
+      }
+      console.log('===========================')
+    }
+    setSelectedEmail(email)
   }
 
   if (loading) {
@@ -279,7 +310,7 @@ export default function GeneratedEmails() {
                 <div
                   key={email.id}
                   className="bg-white border-brutal border-brutal-black shadow-brutal hover:shadow-brutal-lg transition-all cursor-pointer"
-                  onClick={() => setSelectedEmail(email)}
+                  onClick={() => setSelectedEmailWithLogging(email)}
                 >
                   <div className="p-6">
                     <div className="flex items-start justify-between mb-4">
@@ -405,6 +436,56 @@ export default function GeneratedEmails() {
                         </ul>
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {selectedEmail.personalization_elements?.ai_selection_info && (
+                <div className="border-t-brutal border-brutal-black pt-6 mt-6">
+                  <div className="text-sm font-bold text-gray-600 mb-3">AI GENERATION DIAGNOSTICS:</div>
+                  <div className="bg-brutal-yellow border-brutal border-brutal-black p-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-bold">Tokens Consumed:</span>
+                        <span className={`ml-2 ${selectedEmail.personalization_elements.tokens_consumed > 0 ? 'text-green-700' : 'text-red-700'}`}>
+                          {selectedEmail.personalization_elements.tokens_consumed || 0}
+                          {selectedEmail.personalization_elements.tokens_consumed === 0 && ' ⚠️'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-bold">Model:</span> {selectedEmail.personalization_elements.ai_selection_info.model_used}
+                      </div>
+                      <div>
+                        <span className="font-bold">Probability:</span> {selectedEmail.personalization_elements.ai_selection_info.selected_probability}%
+                      </div>
+                      <div>
+                        <span className="font-bold">Temperature:</span> {selectedEmail.personalization_elements.temperature}
+                      </div>
+                      <div className="col-span-2">
+                        <span className="font-bold">Method:</span> {selectedEmail.personalization_elements.ai_selection_info.generation_method}
+                      </div>
+                    </div>
+                    {selectedEmail.personalization_elements.tokens_consumed === 0 && (
+                      <div className="mt-4 p-3 bg-red-100 border-2 border-red-600 text-red-900 font-bold text-xs">
+                        ⚠️ WARNING: No tokens consumed! OpenAI API may not be configured or called.
+                      </div>
+                    )}
+                    {selectedEmail.personalization_elements.tokens_consumed > 0 && (
+                      <div className="mt-4 p-3 bg-green-100 border-2 border-green-600 text-green-900 font-bold text-xs">
+                        ✓ OpenAI API is working! {selectedEmail.personalization_elements.tokens_consumed} tokens used.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {!selectedEmail.personalization_elements?.ai_selection_info && (
+                <div className="border-t-brutal border-brutal-black pt-6 mt-6">
+                  <div className="bg-red-100 border-brutal border-red-600 p-4">
+                    <div className="font-bold text-red-900 mb-2">⚠️ NO AI METADATA FOUND</div>
+                    <div className="text-sm text-red-800">
+                      This email may have been generated without OpenAI. Check Supabase Edge Function logs.
+                    </div>
                   </div>
                 </div>
               )}
