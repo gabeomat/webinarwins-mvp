@@ -121,13 +121,18 @@ export default function UploadWebinar() {
         const email = row.Email?.toLowerCase().trim()
         if (!email) continue
 
+        const attendedValue = row['Attended?'] || row.Attended || row.Status || ''
+        const attended = attendedValue.toString().toUpperCase() === 'TRUE' ||
+                        attendedValue.toLowerCase() === 'yes' ||
+                        attendedValue.toLowerCase() === 'attended'
+
         const attendee = {
           webinar_id: webinar.id,
           name: row.Name || row['Full Name'] || 'Unknown',
           email: email,
-          attended: row.Attended?.toLowerCase() === 'yes' || row.Status?.toLowerCase() === 'attended',
-          attendance_percent: parseFloat(row['Attendance %'] || row['Attendance'] || 0),
-          focus_percent: parseFloat(row['Focus %'] || row['Focus'] || 0),
+          attended: attended,
+          attendance_percent: parseFloat(row['Attendance (%)'] || row['Attendance %'] || row['Attendance'] || 0),
+          focus_percent: parseFloat(row['Focus (%)'] || row['Focus %'] || row['Focus'] || 0),
           attendance_minutes: parseFloat(row['Attendance (Minutes)'] || row['Minutes'] || 0),
           location: row.Location || '',
         }
