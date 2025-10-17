@@ -72,17 +72,21 @@ export default function GeneratedEmails() {
     setGenerationStatus(null)
 
     try {
+      console.log('Starting email generation...')
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
         throw new Error('Not authenticated')
       }
 
+      console.log('Session obtained, calling edge function...')
       const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-emails`
       const params = new URLSearchParams({
         webinar_id: id,
         ...(regenerate && { regenerate: 'true' })
       })
+
+      console.log('Function URL:', `${functionUrl}?${params}`)
 
       const response = await fetch(`${functionUrl}?${params}`, {
         method: 'POST',
@@ -92,25 +96,43 @@ export default function GeneratedEmails() {
         }
       })
 
-      const result = await response.json()
+      console.log('Response status:', response.status)
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to generate emails')
+      let result
+      try {
+        result = await response.json()
+        console.log('Response data:', result)
+      } catch (e) {
+        console.error('Failed to parse response:', e)
+        throw new Error('Invalid response from server')
       }
 
-      setGenerationStatus(result)
+      if (!response.ok) {
+        throw new Error(result.error || `Server error: ${response.status}`)
+      }
+
+      setGenerationStatus({
+        ...result,
+        status: result.status || 'completed'
+      })
 
       if (result.status === 'completed' || result.status === 'partial_success') {
+        console.log('Fetching updated emails...')
         await fetchEmails()
       }
     } catch (error) {
       console.error('Error generating emails:', error)
       setGenerationStatus({
         status: 'error',
-        message: 'Failed to generate emails: ' + error.message
+        message: 'Failed to generate emails: ' + error.message,
+        details: {
+          error_type: error.name,
+          error_stack: error.stack
+        }
       })
     } finally {
       setGenerating(false)
+      console.log('Email generation process complete')
     }
   }
 
