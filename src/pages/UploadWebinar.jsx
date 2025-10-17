@@ -79,18 +79,26 @@ export default function UploadWebinar() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    console.log('Form submitted')
+    console.log('Form data:', formData)
+    console.log('Attendance file:', attendanceFile?.name)
+    console.log('Chat file:', chatFile?.name)
+
     setError('')
 
     if (!formData.title) {
       setError('Webinar title is required')
+      console.error('Validation failed: No title')
       return
     }
 
     if (!attendanceFile || !chatFile) {
       setError('Both CSV files are required')
+      console.error('Validation failed: Missing files', { attendanceFile: !!attendanceFile, chatFile: !!chatFile })
       return
     }
 
+    console.log('Validation passed, starting upload...')
     setLoading(true)
 
     try {
