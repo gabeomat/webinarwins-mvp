@@ -15,6 +15,9 @@ WebinarWins is a React-based web application that helps webinar hosts automate p
 - ✅ Fixed database schema to support decimal values (attendance_percent, focus_percent, attendance_minutes, engagement_score)
 - ✅ Updated CSV parsing to match actual CSV format (Attended? TRUE/FALSE, Attendance (%), Join Timestamp/Exit Timestamp)
 - ✅ Changed join_time and exit_time columns to TEXT type to store duration strings (e.g., "00:57:31" instead of timestamps)
+- ✅ Added delete functionality with confirmation dialogs on Dashboard cards and WebinarDetail page
+- ✅ Implemented loading states on delete buttons to prevent accidental double submissions
+- ✅ Database cascade delete automatically removes all related attendees, chat messages, and generated emails
 
 ## Project Structure
 - **Frontend**: React + Vite application in `frontend/` directory
