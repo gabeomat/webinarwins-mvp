@@ -30,6 +30,28 @@ export default function Dashboard() {
     }
   }
 
+  const handleDelete = async (e, webinarId, webinarTitle) => {
+    e.stopPropagation()
+    
+    if (!confirm(`Are you sure you want to delete "${webinarTitle}"? This will permanently delete all attendee data, chat messages, and generated emails.`)) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('webinars')
+        .delete()
+        .eq('id', webinarId)
+
+      if (error) throw error
+
+      setWebinars(webinars.filter(w => w.id !== webinarId))
+    } catch (error) {
+      console.error('Error deleting webinar:', error)
+      alert('Failed to delete webinar. Please try again.')
+    }
+  }
+
   const handleSignOut = async () => {
     await signOut()
   }
@@ -133,10 +155,16 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="border-t-brutal border-brutal-black bg-brutal-yellow px-6 py-3">
+                <div className="border-t-brutal border-brutal-black bg-gray-50 px-6 py-3 flex justify-between items-center">
                   <div className="font-black uppercase text-sm">
                     VIEW DETAILS →
                   </div>
+                  <button
+                    onClick={(e) => handleDelete(e, webinar.id, webinar.title)}
+                    className="bg-brutal-pink text-white px-3 py-1 text-xs font-black border-brutal border-brutal-black shadow-brutal hover:shadow-brutal-lg transition-all uppercase"
+                  >
+                    DELETE
+                  </button>
                 </div>
               </div>
             ))}
