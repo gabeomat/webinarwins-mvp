@@ -43,9 +43,19 @@ export default function UploadWebinar() {
     }
   }
 
+  const parsePercentage = (value) => {
+    if (!value) return 0
+    const cleaned = String(value).replace(/[^0-9.]/g, '')
+    const parsed = parseFloat(cleaned)
+    return isNaN(parsed) ? 0 : parsed
+  }
+
   const calculateEngagementScore = (attendee, messageCount, questionCount) => {
-    const focusScore = (attendee.focus_percent / 100) * 40
-    const attendanceScore = (attendee.attendance_percent / 100) * 30
+    const focusPercent = isNaN(attendee.focus_percent) ? 0 : attendee.focus_percent
+    const attendancePercent = isNaN(attendee.attendance_percent) ? 0 : attendee.attendance_percent
+    
+    const focusScore = (focusPercent / 100) * 40
+    const attendanceScore = (attendancePercent / 100) * 30
 
     let chatScore = 0
     if (messageCount >= 5) chatScore = 20
@@ -126,9 +136,9 @@ export default function UploadWebinar() {
           name: row.Name || row['Full Name'] || 'Unknown',
           email: email,
           attended: row['Attended?']?.toUpperCase() === 'TRUE' || row.Attended?.toLowerCase() === 'yes' || row.Status?.toLowerCase() === 'attended',
-          attendance_percent: parseFloat(row['Attendance (%)'] || row['Attendance %'] || row['Attendance'] || 0),
-          focus_percent: parseFloat(row['Focus (%)'] || row['Focus %'] || row['Focus'] || 0),
-          attendance_minutes: parseFloat(row['Attendance (Minutes)'] || row['Minutes'] || 0),
+          attendance_percent: parsePercentage(row['Attendance (%)'] || row['Attendance %'] || row['Attendance']),
+          focus_percent: parsePercentage(row['Focus (%)'] || row['Focus %'] || row['Focus']),
+          attendance_minutes: parsePercentage(row['Attendance (Minutes)'] || row['Minutes']),
           join_time: row['Join Timestamp'] || row['Join Time'] || null,
           exit_time: row['Exit Timestamp'] || row['Exit Time'] || null,
           location: row.Location || '',

@@ -18,6 +18,8 @@ WebinarWins is a React-based web application that helps webinar hosts automate p
 - ✅ Added delete functionality with confirmation dialogs on Dashboard cards and WebinarDetail page
 - ✅ Implemented loading states on delete buttons to prevent accidental double submissions
 - ✅ Database cascade delete automatically removes all related attendees, chat messages, and generated emails
+- ✅ Fixed null value crash in WebinarDetail page - added proper null handling for engagement_score and percentage fields
+- ✅ Fixed engagement score calculation bug - created parsePercentage() helper to strip % symbols from CSV values (e.g., "68%" → 68) before parsing, resolving NaN issues that caused scores to show as 0
 
 ## Project Structure
 - **Frontend**: React + Vite application in `frontend/` directory
