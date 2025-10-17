@@ -62,12 +62,16 @@ export default function GeneratedEmails() {
   }
 
   const handleGenerateEmails = async (regenerate = false) => {
+    console.log('handleGenerateEmails called with regenerate:', regenerate)
+
     if (!confirm(regenerate
       ? 'This will regenerate ALL emails. Continue?'
       : 'Generate personalized emails for all attendees?')) {
+      console.log('User cancelled confirmation')
       return
     }
 
+    console.log('User confirmed, starting generation...')
     setGenerating(true)
     setGenerationStatus(null)
 
