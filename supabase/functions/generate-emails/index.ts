@@ -41,7 +41,7 @@ Deno.serve(async (req: Request) => {
       .from('webinars')
       .select('*')
       .eq('id', webinarId)
-      .single()
+      .maybeSingle()
 
     if (webinarError || !webinar) {
       return new Response(
@@ -80,7 +80,7 @@ Deno.serve(async (req: Request) => {
           .from('generated_emails')
           .select('*')
           .eq('attendee_id', attendee.id)
-          .single()
+          .maybeSingle()
 
         if (existingEmail && !regenerate) {
           skipped++
