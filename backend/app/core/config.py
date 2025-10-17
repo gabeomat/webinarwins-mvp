@@ -22,9 +22,11 @@ class Settings(BaseSettings):
     
     # OpenAI
     OPENAI_API_KEY: str = "sk-placeholder"
-    OPENAI_MODEL: str = "gpt-4-turbo-preview"
-    OPENAI_MAX_TOKENS: int = 1000
-    OPENAI_TEMPERATURE: float = 0.7
+    OPENAI_MODEL: str = "gpt-4o"
+    OPENAI_MAX_TOKENS: int = 2000
+    OPENAI_TEMPERATURE: float = 0.8
+    OPENAI_TIMEOUT: int = 30
+    OPENAI_MAX_RETRIES: int = 3
     
     # Authentication
     JWT_SECRET: str = "dev-jwt-secret"

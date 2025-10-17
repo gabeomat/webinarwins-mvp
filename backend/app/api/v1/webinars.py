@@ -1,18 +1,21 @@
 """
 Webinar API endpoints
 """
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 
 from app.core.database import get_db
-from app.models import Webinar, Attendee, ChatMessage
+from app.models import Webinar, Attendee, ChatMessage, GeneratedEmail
 from app.schemas.webinar import (
     WebinarResponse,
     WebinarDetailResponse,
     AttendeeResponse,
-    WebinarStats
+    WebinarStats,
+    GeneratedEmailResponse,
+    EmailGenerationResponse,
+    EmailGenerationStatus
 )
 from app.services.csv_parser import (
     parse_attendance_csv,
@@ -20,6 +23,7 @@ from app.services.csv_parser import (
     match_attendees_to_chats
 )
 from app.services.scoring import calculate_engagement_score, determine_tier
+from app.services.email_generator import generate_email_with_retry, validate_email_content
 
 router = APIRouter()
 
@@ -271,4 +275,206 @@ async def get_attendees(
         attendees_response.append(AttendeeResponse(**attendee_dict))
     
     return attendees_response
+
+
+@router.post("/{webinar_id}/generate-emails", response_model=EmailGenerationResponse)
+async def generate_emails(
+    webinar_id: int,
+    regenerate: bool = Query(False, description="Force regeneration of existing emails"),
+    tier: Optional[str] = Query(None, description="Generate only for specific tier (hot-lead, warm-lead, cool-lead, cold-lead, no-show)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate AI-powered personalized emails for webinar attendees.
+
+    This endpoint:
+    1. Fetches all attendees for the webinar (optionally filtered by tier)
+    2. Skips attendees who already have generated emails (unless regenerate=true)
+    3. Uses OpenAI GPT-4o to generate personalized emails based on engagement
+    4. Stores generated emails in the database
+    5. Returns generation status with success/failure counts
+
+    Args:
+        webinar_id: The webinar ID
+        regenerate: If true, regenerate emails even if they already exist
+        tier: Optional tier filter (e.g., "hot-lead", "warm-lead")
+
+    Returns:
+        EmailGenerationResponse with status and counts
+    """
+    webinar = db.query(Webinar).filter(Webinar.id == webinar_id).first()
+    if not webinar:
+        raise HTTPException(status_code=404, detail="Webinar not found")
+
+    attendees = webinar.attendees
+
+    if tier:
+        tier_normalized = tier.lower().replace('-', ' ').title()
+        attendees = [a for a in attendees if a.engagement_tier and
+                    a.engagement_tier.lower().replace(' ', '-') == tier.lower()]
+
+    if not attendees:
+        return EmailGenerationResponse(
+            webinar_id=webinar_id,
+            status="no_attendees",
+            emails_generated=0,
+            message="No attendees found matching criteria",
+            details=EmailGenerationStatus(
+                total_attendees=0,
+                successful=0,
+                failed=0,
+                skipped=0,
+                errors=[],
+                tier_breakdown={}
+            )
+        )
+
+    successful = 0
+    failed = 0
+    skipped = 0
+    errors = []
+    tier_breakdown = {}
+
+    for attendee in attendees:
+        tier_key = attendee.engagement_tier or "Unknown"
+        tier_breakdown[tier_key] = tier_breakdown.get(tier_key, 0)
+
+        try:
+            existing_email = db.query(GeneratedEmail).filter(
+                GeneratedEmail.attendee_id == attendee.id
+            ).first()
+
+            if existing_email and not regenerate:
+                skipped += 1
+                continue
+
+            email_data = generate_email_with_retry(attendee, webinar, db)
+
+            if not validate_email_content(email_data["subject_line"], email_data["email_body_text"]):
+                failed += 1
+                errors.append(f"Generated email for {attendee.name} failed validation")
+                continue
+
+            if existing_email:
+                existing_email.subject_line = email_data["subject_line"]
+                existing_email.email_body_text = email_data["email_body_text"]
+                existing_email.email_body_html = email_data.get("email_body_html")
+                existing_email.engagement_score = email_data.get("engagement_score")
+                existing_email.engagement_tier = email_data.get("engagement_tier")
+                existing_email.personalization_elements = email_data.get("personalization_elements")
+                existing_email.user_edited = False
+            else:
+                new_email = GeneratedEmail(
+                    attendee_id=attendee.id,
+                    subject_line=email_data["subject_line"],
+                    email_body_text=email_data["email_body_text"],
+                    email_body_html=email_data.get("email_body_html"),
+                    engagement_score=email_data.get("engagement_score"),
+                    engagement_tier=email_data.get("engagement_tier"),
+                    personalization_elements=email_data.get("personalization_elements"),
+                    user_edited=False
+                )
+                db.add(new_email)
+
+            successful += 1
+            tier_breakdown[tier_key] = tier_breakdown.get(tier_key, 0) + 1
+
+        except Exception as e:
+            failed += 1
+            errors.append(f"Failed for {attendee.name}: {str(e)}")
+            continue
+
+    db.commit()
+
+    status = "completed" if failed == 0 else "partial_success" if successful > 0 else "failed"
+    message = f"Generated {successful} emails, skipped {skipped}, failed {failed}"
+
+    return EmailGenerationResponse(
+        webinar_id=webinar_id,
+        status=status,
+        emails_generated=successful,
+        message=message,
+        details=EmailGenerationStatus(
+            total_attendees=len(attendees),
+            successful=successful,
+            failed=failed,
+            skipped=skipped,
+            errors=errors[:10],
+            tier_breakdown=tier_breakdown
+        )
+    )
+
+
+@router.get("/{webinar_id}/emails", response_model=List[GeneratedEmailResponse])
+async def get_generated_emails(
+    webinar_id: int,
+    tier: Optional[str] = Query(None, description="Filter by engagement tier"),
+    search: Optional[str] = Query(None, description="Search by attendee name or email"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all generated emails for a webinar with optional filtering.
+
+    Args:
+        webinar_id: The webinar ID
+        tier: Optional tier filter (e.g., "hot-lead", "warm-lead")
+        search: Optional search string for attendee name or email
+
+    Returns:
+        List of GeneratedEmailResponse objects sorted by engagement tier priority
+    """
+    webinar = db.query(Webinar).filter(Webinar.id == webinar_id).first()
+    if not webinar:
+        raise HTTPException(status_code=404, detail="Webinar not found")
+
+    query = db.query(GeneratedEmail).join(Attendee).filter(
+        Attendee.webinar_id == webinar_id
+    )
+
+    if tier:
+        tier_normalized = tier.lower().replace('-', ' ').title()
+        query = query.filter(GeneratedEmail.engagement_tier == tier_normalized)
+
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            (Attendee.name.ilike(search_pattern)) |
+            (Attendee.email.ilike(search_pattern))
+        )
+
+    generated_emails = query.all()
+
+    tier_priority = {
+        "Hot Lead": 1,
+        "Warm Lead": 2,
+        "Cool Lead": 3,
+        "Cold Lead": 4,
+        "No-Show": 5
+    }
+
+    generated_emails = sorted(
+        generated_emails,
+        key=lambda e: (tier_priority.get(e.engagement_tier or "Unknown", 6), e.attendee.name)
+    )
+
+    response = []
+    for email in generated_emails:
+        email_dict = {
+            "id": email.id,
+            "attendee_id": email.attendee_id,
+            "attendee_name": email.attendee.name,
+            "attendee_email": email.attendee.email,
+            "subject_line": email.subject_line,
+            "email_body_text": email.email_body_text,
+            "email_body_html": email.email_body_html,
+            "engagement_score": email.engagement_score,
+            "engagement_tier": email.engagement_tier,
+            "personalization_elements": email.personalization_elements,
+            "user_edited": email.user_edited,
+            "user_notes": email.user_notes,
+            "created_at": email.created_at
+        }
+        response.append(GeneratedEmailResponse(**email_dict))
+
+    return response
 

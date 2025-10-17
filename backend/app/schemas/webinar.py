@@ -2,7 +2,7 @@
 Webinar schemas for API requests and responses
 """
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -96,12 +96,29 @@ class GeneratedEmailResponse(BaseModel):
     email_body_html: Optional[str] = None
     engagement_score: Optional[int] = None
     engagement_tier: Optional[str] = None
+    personalization_elements: Optional[Dict[str, Any]] = None
     user_edited: bool = False
     user_notes: Optional[str] = None
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
+
+
+class EmailGenerationRequest(BaseModel):
+    """Request schema for email generation"""
+    regenerate: bool = False
+    tier: Optional[str] = None
+
+
+class EmailGenerationStatus(BaseModel):
+    """Detailed status for email generation"""
+    total_attendees: int
+    successful: int
+    failed: int
+    skipped: int
+    errors: List[str] = []
+    tier_breakdown: Dict[str, int] = {}
 
 
 class EmailGenerationResponse(BaseModel):
@@ -110,4 +127,5 @@ class EmailGenerationResponse(BaseModel):
     status: str
     emails_generated: int
     message: str
+    details: Optional[EmailGenerationStatus] = None
 
