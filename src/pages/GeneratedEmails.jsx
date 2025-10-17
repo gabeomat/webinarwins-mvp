@@ -76,29 +76,17 @@ export default function GeneratedEmails() {
     setGenerationStatus(null)
 
     try {
-      console.log('Starting email generation...')
-      const { data: { session } } = await supabase.auth.getSession()
+      console.log('Starting email generation via backend API...')
 
-      if (!session) {
-        throw new Error('Not authenticated')
-      }
-
-      console.log('Session obtained, calling edge function...')
-      const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-emails`
-      const params = new URLSearchParams({
-        webinar_id: id,
-        ...(regenerate && { regenerate: 'true' })
-      })
-
-      console.log('Function URL:', `${functionUrl}?${params}`)
+      const apiUrl = `/api/v1/webinars/${id}/generate-emails?regenerate=${regenerate}`
+      console.log('API URL:', apiUrl)
 
       let response
       try {
-        response = await fetch(`${functionUrl}?${params}`, {
-          method: 'GET',
+        response = await fetch(apiUrl, {
+          method: 'POST',
           headers: {
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
           }
         })
         console.log('Response status:', response.status)
@@ -117,7 +105,7 @@ export default function GeneratedEmails() {
       }
 
       if (!response.ok) {
-        throw new Error(result.error || `Server error: ${response.status}`)
+        throw new Error(result.detail || result.error || `Server error: ${response.status}`)
       }
 
       setGenerationStatus({
