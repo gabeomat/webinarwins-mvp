@@ -34,6 +34,28 @@ export default function Dashboard() {
     await signOut()
   }
 
+  const handleDelete = async (webinarId, e) => {
+    e.stopPropagation()
+
+    if (!confirm('Are you sure you want to delete this webinar? This will also delete all attendees and chat messages.')) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('webinars')
+        .delete()
+        .eq('id', webinarId)
+
+      if (error) throw error
+
+      setWebinars(webinars.filter(w => w.id !== webinarId))
+    } catch (error) {
+      console.error('Error deleting webinar:', error)
+      alert('Failed to delete webinar')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-brutal-yellow" style={{
       backgroundImage: `repeating-linear-gradient(
@@ -103,11 +125,18 @@ export default function Dashboard() {
             {webinars.map((webinar) => (
               <div
                 key={webinar.id}
-                className="bg-white border-brutal border-brutal-black shadow-brutal hover:shadow-brutal-lg transition-all cursor-pointer"
+                className="bg-white border-brutal border-brutal-black shadow-brutal hover:shadow-brutal-lg transition-all cursor-pointer relative"
                 onClick={() => navigate(`/webinar/${webinar.id}`)}
               >
+                <button
+                  onClick={(e) => handleDelete(webinar.id, e)}
+                  className="absolute top-2 right-2 bg-brutal-pink text-white px-3 py-1 text-xs font-black border-brutal border-brutal-black hover:bg-red-600 z-10"
+                  title="Delete webinar"
+                >
+                  DELETE
+                </button>
                 <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start justify-between mb-4 pr-20">
                     <h3 className="text-xl font-black uppercase flex-1">
                       {webinar.title}
                     </h3>

@@ -70,6 +70,26 @@ export default function WebinarDetail() {
     a.click()
   }
 
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this webinar? This will also delete all attendees and chat messages.')) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('webinars')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      navigate('/dashboard')
+    } catch (error) {
+      console.error('Error deleting webinar:', error)
+      alert('Failed to delete webinar')
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-brutal-yellow flex items-center justify-center">
@@ -134,9 +154,12 @@ export default function WebinarDetail() {
                 <p className="text-sm font-bold text-gray-600">{webinar.topic}</p>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button variant="secondary" onClick={exportToCSV}>
                 EXPORT CSV
+              </Button>
+              <Button variant="danger" onClick={handleDelete}>
+                DELETE
               </Button>
               <Button variant="outline" onClick={() => navigate('/dashboard')}>
                 BACK
