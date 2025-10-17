@@ -53,10 +53,10 @@ export default function WebinarDetail() {
       ...filteredAttendees.map(a => [
         a.name,
         a.email,
-        a.engagement_tier,
-        a.engagement_score.toFixed(2),
-        a.focus_percent,
-        a.attendance_percent,
+        a.engagement_tier || 'No-Show',
+        a.engagement_score ? a.engagement_score.toFixed(2) : '0',
+        a.focus_percent || 0,
+        a.attendance_percent || 0,
         a.chat_messages[0]?.count || 0,
         a.attended ? 'Yes' : 'No'
       ])
@@ -248,13 +248,13 @@ export default function WebinarDetail() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center font-black text-lg">
-                      {attendee.engagement_score.toFixed(0)}
+                      {attendee.engagement_score ? attendee.engagement_score.toFixed(0) : 0}
                     </td>
                     <td className="px-4 py-3 text-center font-bold">
-                      {attendee.focus_percent}%
+                      {attendee.focus_percent || 0}%
                     </td>
                     <td className="px-4 py-3 text-center font-bold">
-                      {attendee.attendance_percent}%
+                      {attendee.attendance_percent || 0}%
                     </td>
                     <td className="px-4 py-3 text-center font-bold">
                       {attendee.chat_messages[0]?.count || 0}
