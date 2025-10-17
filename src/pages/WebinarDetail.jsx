@@ -155,6 +155,9 @@ export default function WebinarDetail() {
               )}
             </div>
             <div className="flex gap-2 flex-wrap">
+              <Button variant="primary" onClick={() => navigate(`/webinar/${id}/emails`)}>
+                📧 GENERATE EMAILS
+              </Button>
               <Button variant="secondary" onClick={exportToCSV}>
                 EXPORT CSV
               </Button>

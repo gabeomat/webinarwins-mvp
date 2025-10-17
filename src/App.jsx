@@ -4,6 +4,7 @@ import AuthForm from './components/auth/AuthForm'
 import Dashboard from './pages/Dashboard'
 import UploadWebinar from './pages/UploadWebinar'
 import WebinarDetail from './pages/WebinarDetail'
+import GeneratedEmails from './pages/GeneratedEmails'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -70,6 +71,11 @@ function App() {
           <Route path="/webinar/:id" element={
             <ProtectedRoute>
               <WebinarDetail />
+            </ProtectedRoute>
+          } />
+          <Route path="/webinar/:id/emails" element={
+            <ProtectedRoute>
+              <GeneratedEmails />
             </ProtectedRoute>
           } />
         </Routes>
