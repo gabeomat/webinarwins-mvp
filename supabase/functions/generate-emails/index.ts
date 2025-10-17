@@ -187,17 +187,41 @@ async function generateEmail(openai: OpenAI, attendee: any, webinar: any) {
     : 'No chat messages'
 
   const tierPrompts: Record<string, string> = {
-    'Hot Lead': `Generate a personalized follow-up email for a HOT LEAD who was highly engaged. Score: ${attendee.engagement_score}/100. Focus: ${attendee.focus_percent}%. Messages: ${chatMessages.length}.\n\nChat activity:\n${chatContext}\n\nOffer: ${webinar.offer_name} - ${webinar.offer_description || ''} ($${webinar.price || 0})\nDeadline: ${webinar.deadline || 'soon'}\n\nTone: Confident, enthusiastic, reference their engagement. Natural mention of fast action bonus. Max 500 words.`,
-    'Warm Lead': `Generate a personalized follow-up email for a WARM LEAD with good engagement. Score: ${attendee.engagement_score}/100. Focus: ${attendee.focus_percent}%. Messages: ${chatMessages.length}.\n\nChat activity:\n${chatContext}\n\nOffer: ${webinar.offer_name} - ${webinar.offer_description || ''} ($${webinar.price || 0})\nDeadline: ${webinar.deadline || 'soon'}\n\nTone: Friendly, encouraging, acknowledge their participation. Gentle reminder about fast action bonus. Max 500 words.`,
-    'Cool Lead': `Generate a personalized follow-up email for a COOL LEAD with moderate engagement. Score: ${attendee.engagement_score}/100. Focus: ${attendee.focus_percent}%. Messages: ${chatMessages.length}.\n\nChat activity:\n${chatContext}\n\nOffer: ${webinar.offer_name} - ${webinar.offer_description || ''} ($${webinar.price || 0})\nReplay: ${webinar.replay_url || 'available'}\nDeadline: ${webinar.deadline || 'soon'}\n\nTone: Warm, educational, provide replay, soft mention of offer and fast action bonus. Max 500 words.`,
-    'Cold Lead': `Generate a personalized follow-up email for a COLD LEAD with limited engagement. Score: ${attendee.engagement_score}/100. Focus: ${attendee.focus_percent}%.\n\nOffer: ${webinar.offer_name} - ${webinar.offer_description || ''} ($${webinar.price || 0})\nReplay: ${webinar.replay_url || 'available'}\n\nTone: No judgment, offer replay with highlights, very soft mention of opportunity and fast action bonus. Max 500 words.`,
-    'No-Show': `Generate a personalized follow-up email for a NO-SHOW registrant.\n\nOffer: ${webinar.offer_name} - ${webinar.offer_description || ''} ($${webinar.price || 0})\nReplay: ${webinar.replay_url || 'available'}\nDeadline: ${webinar.deadline || 'soon'}\n\nTone: Zero guilt, empathetic, create curiosity about what they missed, offer replay, natural FOMO, mention fast action bonus. Max 500 words.`,
+    'Hot Lead': `Generate a personalized follow-up email for a HOT LEAD who was highly engaged. Score: ${attendee.engagement_score}/100. Focus: ${attendee.focus_percent}%. Messages: ${chatMessages.length}.\n\nChat activity:\n${chatContext}\n\nOffer: ${webinar.offer_name} - ${webinar.offer_description || ''} ($${webinar.price || 0})\nDeadline: ${webinar.deadline || 'soon'}\n\nTone: Write like you're talking to a friend, not selling to a prospect. If they had chat activity, reference it naturally and authentically (only if it adds real value). Acknowledge their exceptional engagement without being overly effusive. Share the opportunity with honest excitement, not hype. Invite them to join with confidence, but hold space for their decision. Mention the deadline as helpful context, not pressure. Be real, vulnerable, and human \u2014 not polished corporate speak. Max 500 words.`,
+    'Warm Lead': `Generate a personalized follow-up email for a WARM LEAD with good engagement. Score: ${attendee.engagement_score}/100. Focus: ${attendee.focus_percent}%. Messages: ${chatMessages.length}.\n\nChat activity:\n${chatContext}\n\nOffer: ${webinar.offer_name} - ${webinar.offer_description || ''} ($${webinar.price || 0})\nDeadline: ${webinar.deadline || 'soon'}\n\nTone: Write like you're following up with someone you genuinely enjoyed meeting. If they had chat activity, weave it in naturally (only if it adds real connection). Acknowledge their engagement without making it weird or forced. Share the opportunity honestly, not as a pitch. Invite them warmly, respecting their autonomy. Address concerns with empathy and truth, not deflection. Max 500 words.`,
+    'Cool Lead': `Generate a personalized follow-up email for a COOL LEAD with moderate engagement. Score: ${attendee.engagement_score}/100. Focus: ${attendee.focus_percent}%. Messages: ${chatMessages.length}.\n\nChat activity:\n${chatContext}\n\nOffer: ${webinar.offer_name} - ${webinar.offer_description || ''} ($${webinar.price || 0})\nReplay: ${webinar.replay_url || 'available'}\nDeadline: ${webinar.deadline || 'soon'}\n\nTone: Write like you're checking in with someone who seemed interested but distracted. If they had any chat activity, reference it genuinely (only if natural). Recap key insights without lecturing. Offer the replay as a genuine resource, not a sales tactic. Mention the offer as an option, not an agenda. Keep it light, warm, and pressure-free. Educational without being preachy. Max 500 words.`,
+    'Cold Lead': `Generate a personalized follow-up email for a COLD LEAD with limited engagement. Score: ${attendee.engagement_score}/100. Focus: ${attendee.focus_percent}%.\n\nOffer: ${webinar.offer_name} - ${webinar.offer_description || ''} ($${webinar.price || 0})\nReplay: ${webinar.replay_url || 'available'}\n\nTone: Write with complete non-judgment \u2014 life is messy, multitasking happens. Offer the replay with genuine helpfulness, not guilt. Share highlights that actually matter. Mention the opportunity super casually, like you're letting them know about something cool. Zero pressure, zero hype, zero tactics. Make it easy for them to engage if it resonates. Max 500 words.`,
+    'No-Show': `Generate a personalized follow-up email for a NO-SHOW registrant.\n\nOffer: ${webinar.offer_name} - ${webinar.offer_description || ''} ($${webinar.price || 0})\nReplay: ${webinar.replay_url || 'available'}\nDeadline: ${webinar.deadline || 'soon'}\n\nTone: Write with total understanding \u2014 no guilt, no shame, life happens. Acknowledge that things come up without being condescending. Create genuine curiosity, not manufactured FOMO. Offer the replay as something truly valuable, not a consolation prize. Share what they missed in a way that sparks interest, not pressure. Mention the bonus naturally, not as a hook. Make them feel welcomed, not like they're behind. Max 500 words.`,
   }
 
   const tier = attendee.engagement_tier || 'No-Show'
   const prompt = tierPrompts[tier] || tierPrompts['No-Show']
 
-  const systemPrompt = `You are an expert email copywriter. Write conversational, authentic follow-up emails. Format:\n\nSubject: [subject line]\n\n[email body]\n\nAvoid placeholders, corporate jargon, and salesy language. Sound human and friendly.`
+  const systemPrompt = `You are an expert email copywriter specializing in conversational, authentic follow-up emails for webinar attendees. Your writing style is:
+
+Conversational and human. You write like you talk — relaxed, natural, sometimes irreverent, but always with heart.
+
+Emotionally honest. You don't posture as the expert who has it all figured out. You share truth, lessons, and real moments — even the messy ones.
+
+Story-driven and self-aware. You use personal examples, metaphors, and reflections that make complex ideas click.
+
+Warm with an edge. You're unafraid to call out outdated or "bro-marketing" nonsense — but you never attack people. You invite them to see a better way.
+
+Invitational, not persuasive. You don't push or hype. You hold space, tell the truth, and let resonance do the work.
+
+Rhythmic and readable. Short lines. Natural breaks. Emphasis that feels like real conversation, not copywriting gymnastics.
+
+The goal: write emails that connect, not convince — where every word sounds like it came from a real person who's lived it, learned it, and is here to help others do the same.
+
+Refer to their webinar chat engagement and ONLY where it makes sense - mention things that make the reader feel as though you saw their comment and appreciate their engagement. It should sound authentic and natural, not forced.
+
+Format:
+
+Subject: [subject line]
+
+[email body]
+
+Avoid placeholders, corporate jargon, and salesy language. Sound human and friendly.`
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4o',
