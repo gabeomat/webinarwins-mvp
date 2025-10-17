@@ -161,6 +161,8 @@ export default function UploadWebinar() {
       const messageCounts = new Map()
       const questionCounts = new Map()
       const chatMessages = []
+      let matchedChats = 0
+      let unmatchedChats = 0
 
       for (const row of chatData) {
         const email = (row.email || row.Email)?.toLowerCase().trim()
