@@ -8,6 +8,7 @@ export default function Dashboard() {
   const { user, signOut } = useAuth()
   const [webinars, setWebinars] = useState([])
   const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function Dashboard() {
       return
     }
 
+    setDeletingId(webinarId)
     try {
       const { error } = await supabase
         .from('webinars')
@@ -49,6 +51,8 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Error deleting webinar:', error)
       alert('Failed to delete webinar. Please try again.')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -161,9 +165,10 @@ export default function Dashboard() {
                   </div>
                   <button
                     onClick={(e) => handleDelete(e, webinar.id, webinar.title)}
-                    className="bg-brutal-pink text-white px-3 py-1 text-xs font-black border-brutal border-brutal-black shadow-brutal hover:shadow-brutal-lg transition-all uppercase"
+                    disabled={deletingId === webinar.id}
+                    className="bg-brutal-pink text-white px-3 py-1 text-xs font-black border-brutal border-brutal-black shadow-brutal hover:shadow-brutal-lg transition-all uppercase disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    DELETE
+                    {deletingId === webinar.id ? 'DELETING...' : 'DELETE'}
                   </button>
                 </div>
               </div>

@@ -10,6 +10,7 @@ export default function WebinarDetail() {
   const [webinar, setWebinar] = useState(null)
   const [attendees, setAttendees] = useState([])
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(false)
   const [filter, setFilter] = useState('all')
 
   useEffect(() => {
@@ -75,6 +76,7 @@ export default function WebinarDetail() {
       return
     }
 
+    setDeleting(true)
     try {
       const { error } = await supabase
         .from('webinars')
@@ -87,6 +89,7 @@ export default function WebinarDetail() {
     } catch (error) {
       console.error('Error deleting webinar:', error)
       alert('Failed to delete webinar. Please try again.')
+      setDeleting(false)
     }
   }
 
@@ -161,7 +164,7 @@ export default function WebinarDetail() {
               <Button variant="outline" onClick={() => navigate('/dashboard')}>
                 BACK
               </Button>
-              <Button variant="danger" onClick={handleDelete}>
+              <Button variant="danger" onClick={handleDelete} disabled={deleting} loading={deleting}>
                 DELETE
               </Button>
             </div>
