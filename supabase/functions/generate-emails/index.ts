@@ -8,14 +8,13 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    })
-  }
-
   try {
+    if (req.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders,
+      })
+    }
     console.log('Edge function called:', req.method, req.url)
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -33,7 +32,13 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!openaiKey) {
-      throw new Error('OpenAI API key not configured')
+      return new Response(
+        JSON.stringify({
+          error: 'OpenAI API key not configured',
+          message: 'The OPENAI_API_KEY environment variable is not set in Supabase Edge Functions. Please configure it in your Supabase project settings under Edge Functions > Secrets.',
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     const supabaseClient = createClient(supabaseUrl, supabaseKey)
