@@ -93,10 +93,10 @@ export default function GeneratedEmails() {
       console.log('Function URL:', `${functionUrl}?${params}`)
 
       const response = await fetch(`${functionUrl}?${params}`, {
-        method: 'POST',
+        method: 'GET',
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         }
       })
 

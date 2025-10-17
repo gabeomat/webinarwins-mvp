@@ -16,19 +16,35 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    console.log('Edge function called:', req.method, req.url)
 
-    const openai = new OpenAI({
-      apiKey: Deno.env.get('OPENAI_API_KEY') ?? '',
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const openaiKey = Deno.env.get('OPENAI_API_KEY')
+
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      hasOpenAIKey: !!openaiKey,
     })
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase credentials not configured')
+    }
+
+    if (!openaiKey) {
+      throw new Error('OpenAI API key not configured')
+    }
+
+    const supabaseClient = createClient(supabaseUrl, supabaseKey)
+    const openai = new OpenAI({ apiKey: openaiKey })
 
     const url = new URL(req.url)
     const webinarId = url.searchParams.get('webinar_id')
     const regenerate = url.searchParams.get('regenerate') === 'true'
     const tier = url.searchParams.get('tier')
+
+    console.log('Request params:', { webinarId, regenerate, tier })
 
     if (!webinarId) {
       return new Response(
@@ -145,8 +161,12 @@ Deno.serve(async (req: Request) => {
       }
     )
   } catch (error) {
+    console.error('Edge function error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({
+        error: error.message,
+        details: error.toString(),
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
