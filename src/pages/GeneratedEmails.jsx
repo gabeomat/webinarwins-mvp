@@ -92,15 +92,20 @@ export default function GeneratedEmails() {
 
       console.log('Function URL:', `${functionUrl}?${params}`)
 
-      const response = await fetch(`${functionUrl}?${params}`, {
-        method: 'GET',
-        headers: {
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${session.access_token}`,
-        }
-      })
-
-      console.log('Response status:', response.status)
+      let response
+      try {
+        response = await fetch(`${functionUrl}?${params}`, {
+          method: 'GET',
+          headers: {
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${session.access_token}`,
+          }
+        })
+        console.log('Response status:', response.status)
+      } catch (fetchError) {
+        console.error('Fetch failed:', fetchError)
+        throw new Error(`Network request failed: ${fetchError.message}`)
+      }
 
       let result
       try {
