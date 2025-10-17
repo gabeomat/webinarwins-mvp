@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import { supabase } from '../lib/supabase'
+import { useAuth, supabase } from '../contexts/AuthContext'
 import Papa from 'papaparse'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
