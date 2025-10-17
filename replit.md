@@ -12,6 +12,8 @@ WebinarWins is a React-based web application that helps webinar hosts automate p
 - ✅ Set up development workflow "Server" running on port 5000
 - ✅ Created `.env` file template in `frontend/.env` for Supabase credentials
 - ✅ Configured deployment settings for autoscale deployment
+- ✅ Fixed database schema to support decimal values (attendance_percent, focus_percent, attendance_minutes, engagement_score)
+- ✅ Updated CSV parsing to match actual CSV format (Attended? TRUE/FALSE, Attendance (%), Join Timestamp/Exit Timestamp)
 
 ## Project Structure
 - **Frontend**: React + Vite application in `frontend/` directory

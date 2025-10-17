@@ -125,10 +125,12 @@ export default function UploadWebinar() {
           webinar_id: webinar.id,
           name: row.Name || row['Full Name'] || 'Unknown',
           email: email,
-          attended: row.Attended?.toLowerCase() === 'yes' || row.Status?.toLowerCase() === 'attended',
-          attendance_percent: parseFloat(row['Attendance %'] || row['Attendance'] || 0),
-          focus_percent: parseFloat(row['Focus %'] || row['Focus'] || 0),
+          attended: row['Attended?']?.toUpperCase() === 'TRUE' || row.Attended?.toLowerCase() === 'yes' || row.Status?.toLowerCase() === 'attended',
+          attendance_percent: parseFloat(row['Attendance (%)'] || row['Attendance %'] || row['Attendance'] || 0),
+          focus_percent: parseFloat(row['Focus (%)'] || row['Focus %'] || row['Focus'] || 0),
           attendance_minutes: parseFloat(row['Attendance (Minutes)'] || row['Minutes'] || 0),
+          join_time: row['Join Timestamp'] || row['Join Time'] || null,
+          exit_time: row['Exit Timestamp'] || row['Exit Time'] || null,
           location: row.Location || '',
         }
 
