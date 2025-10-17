@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { webinarService } from '../../../services/webinarService';
+import { parseAttendanceCSV, parseChatCSV, createWebinarWithData } from '../../../services/csvParserService';
+import { supabase } from '../../../contexts/AuthContext';
 import { Alert, Button, Card, Input, Textarea, FileUpload } from '../ui';
 
 export default function UploadForm({ onSuccess }) {
@@ -44,7 +45,6 @@ export default function UploadForm({ onSuccess }) {
     e.preventDefault();
     setError('');
 
-    // Validation
     if (!formData.title) {
       setError('Webinar title is required');
       return;
@@ -58,31 +58,32 @@ export default function UploadForm({ onSuccess }) {
     setLoading(true);
 
     try {
-      // Create FormData object
-      const data = new FormData();
-      data.append('title', formData.title);
-      data.append('topic', formData.topic || '');
-      data.append('offer_name', formData.offerName || '');
-      data.append('offer_description', formData.offerDescription || '');
-      data.append('price', formData.price || '0');
-      data.append('deadline', formData.deadline || '');
-      data.append('replay_url', formData.replayUrl || '');
-      data.append('attendance_csv', attendanceFile);
-      data.append('chat_csv', chatFile);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('You must be logged in to create a webinar');
+      }
 
-      // Submit to API
-      const result = await webinarService.createWebinar(data);
-      
-      // Call success callback with webinar ID
+      const attendees = await parseAttendanceCSV(attendanceFile);
+      const messages = await parseChatCSV(chatFile);
+
+      const webinarData = {
+        title: formData.title,
+        topic: formData.topic,
+        offer_name: formData.offerName,
+        offer_description: formData.offerDescription,
+        price: formData.price,
+        deadline: formData.deadline,
+        replay_url: formData.replayUrl,
+      };
+
+      const result = await createWebinarWithData(webinarData, attendees, messages, user.id);
+
       if (onSuccess) {
         onSuccess(result);
       }
     } catch (err) {
       console.error('Upload error:', err);
-      setError(
-        err.response?.data?.detail || 
-        'Failed to upload files. Please check your CSV format and try again.'
-      );
+      setError(err.message || 'Failed to upload files. Please check your CSV format and try again.');
     } finally {
       setLoading(false);
     }

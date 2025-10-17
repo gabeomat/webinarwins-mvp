@@ -7,6 +7,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 }
 
+const MAX_RETRIES = 3
+const OPENAI_TIMEOUT = 60000
+
 Deno.serve(async (req: Request) => {
   try {
     if (req.method === 'OPTIONS') {
@@ -15,17 +18,10 @@ Deno.serve(async (req: Request) => {
         headers: corsHeaders,
       })
     }
-    console.log('Edge function called:', req.method, req.url)
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     const openaiKey = Deno.env.get('OPENAI_API_KEY')
-
-    console.log('Environment check:', {
-      hasSupabaseUrl: !!supabaseUrl,
-      hasSupabaseKey: !!supabaseKey,
-      hasOpenAIKey: !!openaiKey,
-    })
 
     if (!supabaseUrl || !supabaseKey) {
       throw new Error('Supabase credentials not configured')
@@ -35,7 +31,7 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           error: 'OpenAI API key not configured',
-          message: 'The OPENAI_API_KEY environment variable is not set in Supabase Edge Functions. Please configure it in your Supabase project settings under Edge Functions > Secrets.',
+          message: 'The OPENAI_API_KEY environment variable is not set in Supabase Edge Functions.',
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -48,8 +44,6 @@ Deno.serve(async (req: Request) => {
     const webinarId = url.searchParams.get('webinar_id')
     const regenerate = url.searchParams.get('regenerate') === 'true'
     const tier = url.searchParams.get('tier')
-
-    console.log('Request params:', { webinarId, regenerate, tier })
 
     if (!webinarId) {
       return new Response(
@@ -108,7 +102,13 @@ Deno.serve(async (req: Request) => {
           continue
         }
 
-        const emailContent = await generateEmail(openai, attendee, webinar)
+        const emailContent = await generateEmailWithRetry(openai, attendee, webinar)
+
+        if (!validateEmailContent(emailContent.subject, emailContent.body)) {
+          failed++
+          errors.push(`Generated email for ${attendee.name} failed validation`)
+          continue
+        }
 
         if (existingEmail) {
           await supabaseClient
@@ -180,24 +180,8 @@ Deno.serve(async (req: Request) => {
   }
 })
 
-async function generateEmail(openai: OpenAI, attendee: any, webinar: any) {
-  const chatMessages = attendee.chat_messages || []
-  const chatContext = chatMessages.length > 0
-    ? chatMessages.map((m: any) => `${m.is_question ? 'Question' : 'Comment'}: ${m.message_text}`).join('\n')
-    : 'No chat messages'
-
-  const tierPrompts: Record<string, string> = {
-    'Hot Lead': `Generate a personalized follow-up email for a HOT LEAD who was highly engaged. Score: ${attendee.engagement_score}/100. Focus: ${attendee.focus_percent}%. Messages: ${chatMessages.length}.\n\nChat activity:\n${chatContext}\n\nOffer: ${webinar.offer_name} - ${webinar.offer_description || ''} ($${webinar.price || 0})\nDeadline: ${webinar.deadline || 'soon'}\n\nTone: Write like you're talking to a friend, not selling to a prospect. If they had chat activity, reference it naturally and authentically (only if it adds real value). Acknowledge their exceptional engagement without being overly effusive. Share the opportunity with honest excitement, not hype. Invite them to join with confidence, but hold space for their decision. Mention the deadline as helpful context, not pressure. Be real, vulnerable, and human \u2014 not polished corporate speak. Max 500 words.`,
-    'Warm Lead': `Generate a personalized follow-up email for a WARM LEAD with good engagement. Score: ${attendee.engagement_score}/100. Focus: ${attendee.focus_percent}%. Messages: ${chatMessages.length}.\n\nChat activity:\n${chatContext}\n\nOffer: ${webinar.offer_name} - ${webinar.offer_description || ''} ($${webinar.price || 0})\nDeadline: ${webinar.deadline || 'soon'}\n\nTone: Write like you're following up with someone you genuinely enjoyed meeting. If they had chat activity, weave it in naturally (only if it adds real connection). Acknowledge their engagement without making it weird or forced. Share the opportunity honestly, not as a pitch. Invite them warmly, respecting their autonomy. Address concerns with empathy and truth, not deflection. Max 500 words.`,
-    'Cool Lead': `Generate a personalized follow-up email for a COOL LEAD with moderate engagement. Score: ${attendee.engagement_score}/100. Focus: ${attendee.focus_percent}%. Messages: ${chatMessages.length}.\n\nChat activity:\n${chatContext}\n\nOffer: ${webinar.offer_name} - ${webinar.offer_description || ''} ($${webinar.price || 0})\nReplay: ${webinar.replay_url || 'available'}\nDeadline: ${webinar.deadline || 'soon'}\n\nTone: Write like you're checking in with someone who seemed interested but distracted. If they had any chat activity, reference it genuinely (only if natural). Recap key insights without lecturing. Offer the replay as a genuine resource, not a sales tactic. Mention the offer as an option, not an agenda. Keep it light, warm, and pressure-free. Educational without being preachy. Max 500 words.`,
-    'Cold Lead': `Generate a personalized follow-up email for a COLD LEAD with limited engagement. Score: ${attendee.engagement_score}/100. Focus: ${attendee.focus_percent}%.\n\nOffer: ${webinar.offer_name} - ${webinar.offer_description || ''} ($${webinar.price || 0})\nReplay: ${webinar.replay_url || 'available'}\n\nTone: Write with complete non-judgment \u2014 life is messy, multitasking happens. Offer the replay with genuine helpfulness, not guilt. Share highlights that actually matter. Mention the opportunity super casually, like you're letting them know about something cool. Zero pressure, zero hype, zero tactics. Make it easy for them to engage if it resonates. Max 500 words.`,
-    'No-Show': `Generate a personalized follow-up email for a NO-SHOW registrant.\n\nOffer: ${webinar.offer_name} - ${webinar.offer_description || ''} ($${webinar.price || 0})\nReplay: ${webinar.replay_url || 'available'}\nDeadline: ${webinar.deadline || 'soon'}\n\nTone: Write with total understanding \u2014 no guilt, no shame, life happens. Acknowledge that things come up without being condescending. Create genuine curiosity, not manufactured FOMO. Offer the replay as something truly valuable, not a consolation prize. Share what they missed in a way that sparks interest, not pressure. Mention the bonus naturally, not as a hook. Make them feel welcomed, not like they're behind. Max 500 words.`,
-  }
-
-  const tier = attendee.engagement_tier || 'No-Show'
-  const prompt = tierPrompts[tier] || tierPrompts['No-Show']
-
-  const systemPrompt = `You are an expert email copywriter specializing in conversational, authentic follow-up emails for webinar attendees. Your writing style is:
+function buildSystemPrompt(): string {
+  return `You are an expert email copywriter specializing in conversational, authentic follow-up emails for webinar attendees. Your writing style is:
 
 Conversational and human. You write like you talk — relaxed, natural, sometimes irreverent, but always with heart.
 
@@ -215,42 +199,239 @@ The goal: write emails that connect, not convince — where every word sounds li
 
 Refer to their webinar chat engagement and ONLY where it makes sense - mention things that make the reader feel as though you saw their comment and appreciate their engagement. It should sound authentic and natural, not forced.
 
+Your task is to generate 3 different email versions with varying phrasings, structures, and openings. For each version:
+1. Assign a probability rating (0-100) indicating how common or typical that response pattern is
+2. Higher probability = more common/generic pattern
+3. Lower probability = more unique/distinctive pattern
+
+After generating all 3 versions, select the version with the LOWEST probability rating and return only that version as the final email.
+
+IMPORTANT CONSTRAINTS:
+- Maximum 500 words per email
+- Subject line + body format
+- Conversational tone throughout
+- Natural mention of fast action bonus (if applicable)
+- No placeholder text like [Your Name] or [Insert Details]
+- Make it sound human, not AI-generated`
+}
+
+function buildTierPrompt(attendee: any, webinar: any, chatContext: string): string {
+  const tier = attendee.engagement_tier || 'No-Show'
+  const chatMessages = attendee.chat_messages || []
+  const messageCount = chatMessages.length
+  const questionCount = chatMessages.filter((m: any) => m.is_question).length
+
+  const chatRef = messageCount > 0 ? `\n\nTheir chat activity:\n${chatContext}` : ''
+
+  const commonContext = `ATTENDEE PROFILE:
+- Name: ${attendee.name}
+- Engagement Score: ${attendee.engagement_score || 0}/100
+- Focus: ${attendee.focus_percent || 0}%
+- Attendance: ${attendee.attendance_percent || 0}% of webinar
+- Chat Messages: ${messageCount} (including ${questionCount} questions)${chatRef}
+
+WEBINAR & OFFER:
+- Topic: ${webinar.topic || 'the webinar content'}
+- Offer: ${webinar.offer_name || 'our special offer'} - ${webinar.offer_description || ''}
+- Price: $${webinar.price || 0}
+- Deadline: ${webinar.deadline || 'soon'}
+- Replay: ${webinar.replay_url || 'available upon request'}`
+
+  const tierPrompts: Record<string, string> = {
+    'Hot Lead': `Generate a personalized follow-up email for a HOT LEAD from our webinar.
+
+${commonContext}
+
+TONE & APPROACH:
+- Write like you're talking to a friend, not selling to a prospect
+- If they had chat activity, reference it naturally and authentically (only if it adds real value)
+- Acknowledge their exceptional engagement without being overly effusive
+- Share the opportunity with honest excitement, not hype
+- Invite them to join with confidence, but hold space for their decision
+- Mention the deadline as helpful context, not pressure
+- Be real, vulnerable, and human — not polished corporate speak
+
+Remember: Generate 3 versions with probability ratings, then select and return ONLY the lowest probability version.
+
 Format:
+Subject: [your subject line]
 
-Subject: [subject line]
+[email body - conversational, max 500 words]
 
-[email body]
+---
+SELECTED VERSION PROBABILITY: [X%]`,
 
-Avoid placeholders, corporate jargon, and salesy language. Sound human and friendly.`
+    'Warm Lead': `Generate a personalized follow-up email for a WARM LEAD from our webinar.
+
+${commonContext}
+
+TONE & APPROACH:
+- Write like you're following up with someone you genuinely enjoyed meeting
+- If they had chat activity, weave it in naturally (only if it adds real connection)
+- Acknowledge their engagement without making it weird or forced
+- Share the opportunity honestly, not as a pitch
+- Invite them warmly, respecting their autonomy
+- Address concerns with empathy and truth, not deflection
+
+Remember: Generate 3 versions with probability ratings, then select and return ONLY the lowest probability version.
+
+Format:
+Subject: [your subject line]
+
+[email body - conversational, max 500 words]
+
+---
+SELECTED VERSION PROBABILITY: [X%]`,
+
+    'Cool Lead': `Generate a personalized follow-up email for a COOL LEAD from our webinar.
+
+${commonContext}
+
+TONE & APPROACH:
+- Write like you're checking in with someone who seemed interested but distracted
+- If they had any chat activity, reference it genuinely (only if natural)
+- Recap key insights without lecturing
+- Offer the replay as a genuine resource, not a sales tactic
+- Mention the offer as an option, not an agenda
+- Keep it light, warm, and pressure-free
+- Educational without being preachy
+
+Remember: Generate 3 versions with probability ratings, then select and return ONLY the lowest probability version.
+
+Format:
+Subject: [your subject line]
+
+[email body - conversational, max 500 words]
+
+---
+SELECTED VERSION PROBABILITY: [X%]`,
+
+    'Cold Lead': `Generate a personalized follow-up email for a COLD LEAD from our webinar.
+
+${commonContext}
+
+TONE & APPROACH:
+- Write with complete non-judgment — life is messy, multitasking happens
+- Offer the replay with genuine helpfulness, not guilt
+- Share highlights that actually matter
+- Mention the opportunity super casually, like you're letting them know about something cool
+- Zero pressure, zero hype, zero tactics
+- Make it easy for them to engage if it resonates
+
+Remember: Generate 3 versions with probability ratings, then select and return ONLY the lowest probability version.
+
+Format:
+Subject: [your subject line]
+
+[email body - conversational, max 500 words]
+
+---
+SELECTED VERSION PROBABILITY: [X%]`,
+
+    'No-Show': `Generate a personalized follow-up email for a NO-SHOW from our webinar.
+
+ATTENDEE PROFILE:
+- Name: ${attendee.name}
+- Status: Registered but didn't attend
+- They missed the live event
+
+WEBINAR & OFFER:
+- Topic: ${webinar.topic || 'the webinar content'}
+- Offer: ${webinar.offer_name || 'our special offer'} - ${webinar.offer_description || ''}
+- Price: $${webinar.price || 0}
+- Deadline: ${webinar.deadline || 'soon'}
+- Replay: ${webinar.replay_url || 'available upon request'}
+
+TONE & APPROACH:
+- Write with total understanding — no guilt, no shame, life happens
+- Acknowledge that things come up without being condescending
+- Create genuine curiosity, not manufactured FOMO
+- Offer the replay as something truly valuable, not a consolation prize
+- Share what they missed in a way that sparks interest, not pressure
+- Mention the bonus naturally, not as a hook
+- Make them feel welcomed, not like they're behind
+
+Remember: Generate 3 versions with probability ratings, then select and return ONLY the lowest probability version.
+
+Format:
+Subject: [your subject line]
+
+[email body - conversational, max 500 words]
+
+---
+SELECTED VERSION PROBABILITY: [X%]`,
+  }
+
+  return tierPrompts[tier] || tierPrompts['No-Show']
+}
+
+function parseAIResponse(responseText: string): { subject: string; body: string; probability: number } {
+  const lines = responseText.trim().split('\n')
+
+  let subject = ''
+  let bodyLines: string[] = []
+  let probability = 50
+  let inBody = false
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+
+    if (trimmed.startsWith('Subject:')) {
+      subject = trimmed.replace('Subject:', '').trim()
+      inBody = true
+      continue
+    }
+
+    if (trimmed.includes('SELECTED VERSION PROBABILITY:')) {
+      const probStr = trimmed.split(':')[1]?.trim().replace('%', '')
+      try {
+        probability = parseInt(probStr, 10)
+      } catch {
+        probability = 50
+      }
+      break
+    }
+
+    if (inBody && trimmed && !trimmed.startsWith('---')) {
+      bodyLines.push(trimmed)
+    }
+  }
+
+  const body = bodyLines.join('\n\n').trim()
+
+  if (!subject || !body) {
+    throw new Error('Failed to parse AI response - missing subject or body')
+  }
+
+  return { subject, body, probability }
+}
+
+async function generateEmail(openai: OpenAI, attendee: any, webinar: any) {
+  const chatMessages = attendee.chat_messages || []
+  const chatContext = chatMessages.length > 0
+    ? chatMessages.map((m: any) => `${m.is_question ? 'Question' : 'Comment'}: ${m.message_text}`).join('\n')
+    : 'No chat messages'
+
+  const systemPrompt = buildSystemPrompt()
+  const userPrompt = buildTierPrompt(attendee, webinar, chatContext)
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4o',
     messages: [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: prompt },
+      { role: 'user', content: userPrompt },
     ],
     max_tokens: 2000,
     temperature: 0.8,
+    timeout: OPENAI_TIMEOUT,
   })
 
   const content = response.choices[0].message.content || ''
-  const lines = content.split('\n')
-  let subject = ''
-  let body = ''
-  let inBody = false
-
-  for (const line of lines) {
-    if (line.startsWith('Subject:')) {
-      subject = line.replace('Subject:', '').trim()
-      inBody = true
-    } else if (inBody && line.trim()) {
-      body += line + '\n\n'
-    }
-  }
+  const parsed = parseAIResponse(content)
 
   return {
-    subject: subject || 'Following up from the webinar',
-    body: body.trim(),
+    subject: parsed.subject,
+    body: parsed.body,
     metadata: {
       engagement_score: attendee.engagement_score,
       engagement_tier: attendee.engagement_tier,
@@ -263,6 +444,64 @@ Avoid placeholders, corporate jargon, and salesy language. Sound human and frien
         is_question: m.is_question,
         timestamp: m.timestamp,
       })),
+      ai_selection_info: {
+        selected_probability: parsed.probability,
+        model_used: 'gpt-4o',
+        generation_method: '3-version-selection',
+      },
+      tokens_consumed: response.usage?.total_tokens || 0,
+      temperature: 0.8,
     },
   }
+}
+
+async function generateEmailWithRetry(openai: OpenAI, attendee: any, webinar: any, maxRetries = MAX_RETRIES) {
+  let lastError: Error | null = null
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await generateEmail(openai, attendee, webinar)
+    } catch (error) {
+      lastError = error as Error
+      if (attempt < maxRetries - 1) {
+        const waitTime = Math.pow(2, attempt) * 1000
+        await new Promise((resolve) => setTimeout(resolve, waitTime))
+        continue
+      }
+    }
+  }
+
+  throw new Error(`Failed to generate email after ${maxRetries} attempts: ${lastError?.message}`)
+}
+
+function validateEmailContent(subject: string, body: string): boolean {
+  const placeholders = [
+    '[your name]',
+    '[insert',
+    '[name]',
+    '[email]',
+    '[company]',
+    '[details]',
+    'xxx',
+    'placeholder',
+  ]
+
+  const contentLower = (subject + ' ' + body).toLowerCase()
+
+  for (const placeholder of placeholders) {
+    if (contentLower.includes(placeholder)) {
+      return false
+    }
+  }
+
+  const wordCount = body.split(/\s+/).length
+  if (wordCount > 550 || wordCount < 50) {
+    return false
+  }
+
+  if (!subject || subject.length < 5 || subject.length > 100) {
+    return false
+  }
+
+  return true
 }

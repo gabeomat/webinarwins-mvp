@@ -62,50 +62,34 @@ export default function GeneratedEmails() {
   }
 
   const handleGenerateEmails = async (regenerate = false) => {
-    console.log('handleGenerateEmails called with regenerate:', regenerate)
-
     if (!confirm(regenerate
       ? 'This will regenerate ALL emails. Continue?'
       : 'Generate personalized emails for all attendees?')) {
-      console.log('User cancelled confirmation')
       return
     }
 
-    console.log('User confirmed, starting generation...')
     setGenerating(true)
     setGenerationStatus(null)
 
     try {
-      console.log('Starting email generation via backend API...')
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-      const apiUrl = `/api/v1/webinars/${id}/generate-emails?regenerate=${regenerate}`
-      console.log('API URL:', apiUrl)
+      const edgeFunctionUrl = `${supabaseUrl}/functions/v1/generate-emails?webinar_id=${id}&regenerate=${regenerate}`
 
-      let response
-      try {
-        response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        })
-        console.log('Response status:', response.status)
-      } catch (fetchError) {
-        console.error('Fetch failed:', fetchError)
-        throw new Error(`Network request failed: ${fetchError.message}`)
-      }
+      const response = await fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'apikey': supabaseAnonKey,
+        }
+      })
 
-      let result
-      try {
-        result = await response.json()
-        console.log('Response data:', result)
-      } catch (e) {
-        console.error('Failed to parse response:', e)
-        throw new Error('Invalid response from server')
-      }
+      const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.detail || result.error || `Server error: ${response.status}`)
+        throw new Error(result.error || `Server error: ${response.status}`)
       }
 
       setGenerationStatus({
@@ -114,7 +98,6 @@ export default function GeneratedEmails() {
       })
 
       if (result.status === 'completed' || result.status === 'partial_success') {
-        console.log('Fetching updated emails...')
         await fetchEmails()
       }
     } catch (error) {
@@ -122,14 +105,9 @@ export default function GeneratedEmails() {
       setGenerationStatus({
         status: 'error',
         message: 'Failed to generate emails: ' + error.message,
-        details: {
-          error_type: error.name,
-          error_stack: error.stack
-        }
       })
     } finally {
       setGenerating(false)
-      console.log('Email generation process complete')
     }
   }
 

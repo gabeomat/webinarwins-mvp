@@ -1,4 +1,0 @@
-"""
-Services for business logic
-"""
-
