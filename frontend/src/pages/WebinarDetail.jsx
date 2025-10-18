@@ -12,9 +12,15 @@ export default function WebinarDetail() {
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
   const [filter, setFilter] = useState('all')
+  const [emails, setEmails] = useState([])
+  const [generatingEmails, setGeneratingEmails] = useState(false)
+  const [emailFilter, setEmailFilter] = useState('all')
+  const [editingEmail, setEditingEmail] = useState(null)
+  const [showEmailSection, setShowEmailSection] = useState(false)
 
   useEffect(() => {
     fetchWebinarData()
+    fetchEmails()
   }, [id])
 
   const fetchWebinarData = async () => {
@@ -45,6 +51,117 @@ export default function WebinarDetail() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchEmails = async () => {
+    try {
+      const { data: emailsData, error: emailsError } = await supabase
+        .from('generated_emails')
+        .select(`
+          *,
+          attendees!inner(
+            name,
+            email,
+            engagement_tier,
+            engagement_score,
+            webinar_id
+          )
+        `)
+        .eq('attendees.webinar_id', id)
+        .order('created_at', { ascending: false })
+
+      if (emailsError) throw emailsError
+      setEmails(emailsData || [])
+      if (emailsData && emailsData.length > 0) {
+        setShowEmailSection(true)
+      }
+    } catch (error) {
+      console.error('Error fetching emails:', error)
+    }
+  }
+
+  const generateEmails = async (tier = null) => {
+    setGeneratingEmails(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('No active session')
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      let url = `${supabaseUrl}/functions/v1/generate-emails?webinar_id=${id}`
+      if (tier) url += `&tier=${encodeURIComponent(tier)}`
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to generate emails')
+      }
+
+      alert(`✅ Generated ${result.emails_generated} emails successfully!`)
+      await fetchEmails()
+      setShowEmailSection(true)
+    } catch (error) {
+      console.error('Error generating emails:', error)
+      alert(`❌ Error: ${error.message}`)
+    } finally {
+      setGeneratingEmails(false)
+    }
+  }
+
+  const saveEmail = async (emailId, updates) => {
+    try {
+      const { error } = await supabase
+        .from('generated_emails')
+        .update({
+          ...updates,
+          user_edited: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', emailId)
+
+      if (error) throw error
+      await fetchEmails()
+      setEditingEmail(null)
+      alert('✅ Email updated successfully!')
+    } catch (error) {
+      console.error('Error saving email:', error)
+      alert('❌ Failed to save email')
+    }
+  }
+
+  const exportEmailsToCSV = () => {
+    const filteredEmails = emailFilter === 'all'
+      ? emails
+      : emails.filter(e => e.attendees.engagement_tier === emailFilter)
+
+    const csvData = [
+      ['Name', 'Email', 'Tier', 'Subject', 'Body'],
+      ...filteredEmails.map(e => [
+        e.attendees.name,
+        e.attendees.email,
+        e.attendees.engagement_tier,
+        e.subject_line,
+        e.email_body_text.replace(/\n/g, ' '),
+      ])
+    ]
+
+    const csv = csvData.map(row => 
+      row.map(cell => `"${cell}"`).join(',')
+    ).join('\n')
+    
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${webinar.title}-emails.csv`
+    a.click()
   }
 
   const exportToCSV = () => {
@@ -271,6 +388,203 @@ export default function WebinarDetail() {
             <p className="font-black text-xl">NO ATTENDEES MATCH THIS FILTER</p>
           </div>
         )}
+
+        {/* Email Generation Section */}
+        <div className="mt-12">
+          <div className="bg-white border-brutal border-brutal-black shadow-brutal p-6 mb-6">
+            <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+              <h2 className="text-2xl font-black uppercase">AI-Generated Follow-Up Emails</h2>
+              <Button
+                onClick={() => setShowEmailSection(!showEmailSection)}
+                variant="outline"
+              >
+                {showEmailSection ? 'HIDE' : 'SHOW'} EMAILS
+              </Button>
+            </div>
+
+            {showEmailSection && (
+              <>
+                <div className="border-t-brutal border-brutal-black pt-4 mb-4">
+                  <p className="text-sm font-bold mb-4">Generate personalized follow-up emails for attendees:</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => generateEmails()}
+                      disabled={generatingEmails}
+                      loading={generatingEmails}
+                    >
+                      GENERATE FOR ALL
+                    </Button>
+                    <Button
+                      onClick={() => generateEmails('Hot Lead')}
+                      disabled={generatingEmails}
+                      variant="secondary"
+                    >
+                      HOT LEADS
+                    </Button>
+                    <Button
+                      onClick={() => generateEmails('Warm Lead')}
+                      disabled={generatingEmails}
+                      variant="secondary"
+                    >
+                      WARM LEADS
+                    </Button>
+                    <Button
+                      onClick={() => generateEmails('Cool Lead')}
+                      disabled={generatingEmails}
+                      variant="secondary"
+                    >
+                      COOL LEADS
+                    </Button>
+                    <Button
+                      onClick={() => generateEmails('Cold Lead')}
+                      disabled={generatingEmails}
+                      variant="secondary"
+                    >
+                      COLD LEADS
+                    </Button>
+                    <Button
+                      onClick={() => generateEmails('No-Show')}
+                      disabled={generatingEmails}
+                      variant="secondary"
+                    >
+                      NO-SHOWS
+                    </Button>
+                  </div>
+                </div>
+
+                {emails.length > 0 && (
+                  <>
+                    <div className="border-t-brutal border-brutal-black pt-4 mb-4">
+                      <div className="flex items-center justify-between flex-wrap gap-4">
+                        <div className="flex gap-2 flex-wrap">
+                          <button
+                            onClick={() => setEmailFilter('all')}
+                            className={`px-3 py-1 text-xs font-black border-brutal border-brutal-black ${
+                              emailFilter === 'all' ? 'bg-brutal-black text-white' : 'bg-white'
+                            }`}
+                          >
+                            ALL ({emails.length})
+                          </button>
+                          {['Hot Lead', 'Warm Lead', 'Cool Lead', 'Cold Lead', 'No-Show'].map((tier) => {
+                            const count = emails.filter(e => e.attendees.engagement_tier === tier).length
+                            if (count === 0) return null
+                            return (
+                              <button
+                                key={tier}
+                                onClick={() => setEmailFilter(tier)}
+                                className={`px-3 py-1 text-xs font-black border-brutal border-brutal-black ${
+                                  emailFilter === tier ? getTierColor(tier) : 'bg-white'
+                                }`}
+                              >
+                                {tier.toUpperCase()} ({count})
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <Button onClick={exportEmailsToCSV} variant="secondary" size="sm">
+                          EXPORT EMAILS CSV
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {emails
+                        .filter(e => emailFilter === 'all' || e.attendees.engagement_tier === emailFilter)
+                        .map((email) => (
+                          <div
+                            key={email.id}
+                            className="border-brutal border-brutal-black bg-gray-50 p-4"
+                          >
+                            {editingEmail === email.id ? (
+                              <div>
+                                <div className="mb-3">
+                                  <label className="block text-xs font-black mb-1">SUBJECT:</label>
+                                  <input
+                                    type="text"
+                                    defaultValue={email.subject_line}
+                                    id={`subject-${email.id}`}
+                                    className="w-full border-brutal border-brutal-black p-2 font-bold"
+                                  />
+                                </div>
+                                <div className="mb-3">
+                                  <label className="block text-xs font-black mb-1">BODY:</label>
+                                  <textarea
+                                    defaultValue={email.email_body_text}
+                                    id={`body-${email.id}`}
+                                    rows="15"
+                                    className="w-full border-brutal border-brutal-black p-2 font-mono text-sm"
+                                  />
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    onClick={() => {
+                                      const subject = document.getElementById(`subject-${email.id}`).value
+                                      const body = document.getElementById(`body-${email.id}`).value
+                                      saveEmail(email.id, {
+                                        subject_line: subject,
+                                        email_body_text: body,
+                                      })
+                                    }}
+                                    size="sm"
+                                  >
+                                    SAVE
+                                  </Button>
+                                  <Button
+                                    onClick={() => setEditingEmail(null)}
+                                    variant="outline"
+                                    size="sm"
+                                  >
+                                    CANCEL
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="font-black text-sm">{email.attendees.name}</span>
+                                      <span className="text-xs font-mono text-gray-600">{email.attendees.email}</span>
+                                      <span className={`px-2 py-1 text-xs font-black ${getTierColor(email.attendees.engagement_tier)}`}>
+                                        {email.attendees.engagement_tier}
+                                      </span>
+                                      {email.user_edited && (
+                                        <span className="px-2 py-1 text-xs font-black bg-brutal-cyan">EDITED</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <Button
+                                    onClick={() => setEditingEmail(email.id)}
+                                    variant="outline"
+                                    size="sm"
+                                  >
+                                    EDIT
+                                  </Button>
+                                </div>
+                                <div className="mb-2">
+                                  <span className="text-xs font-black text-gray-600">SUBJECT: </span>
+                                  <span className="font-bold">{email.subject_line}</span>
+                                </div>
+                                <div className="bg-white border-brutal border-brutal-black p-3">
+                                  <pre className="text-sm whitespace-pre-wrap font-sans">{email.email_body_text}</pre>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  </>
+                )}
+
+                {emails.length === 0 && (
+                  <Alert type="info">
+                    No emails generated yet. Click a button above to generate personalized follow-up emails using AI.
+                  </Alert>
+                )}
+              </>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   )
