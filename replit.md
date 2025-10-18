@@ -3,7 +3,7 @@
 ## Project Overview
 WebinarWins is a React-based web application that helps webinar hosts automate personalized follow-up emails based on attendee engagement metrics. The app uses Supabase for authentication and backend services.
 
-## Recent Changes (October 17, 2025)
+## Recent Changes (October 17-18, 2025)
 - ✅ Imported GitHub repository to Replit
 - ✅ Installed all frontend dependencies (React, Vite, Tailwind, Supabase, etc.)
 - ✅ Configured Vite dev server for Replit environment (port 5000, host 0.0.0.0, allowedHosts: true)
@@ -20,6 +20,14 @@ WebinarWins is a React-based web application that helps webinar hosts automate p
 - ✅ Database cascade delete automatically removes all related attendees, chat messages, and generated emails
 - ✅ Fixed null value crash in WebinarDetail page - added proper null handling for engagement_score and percentage fields
 - ✅ Fixed engagement score calculation bug - created parsePercentage() helper to strip % symbols from CSV values (e.g., "68%" → 68) before parsing, resolving NaN issues that caused scores to show as 0
+- ✅ **Implemented AI-powered email generation feature:**
+  - Integrated Supabase Edge Function (`/functions/v1/generate-emails`) for OpenAI-based email generation
+  - Added email generation UI in WebinarDetail page with tier-based filtering (Hot, Warm, Cool, Cold, No-Show)
+  - Built email display list with subject lines, body preview, and engagement tier badges
+  - Implemented inline email editing (subject + body) with save functionality
+  - Added CSV export for generated emails
+  - Includes loading states, error handling, and user-edited badges
+  - Requires OpenAI API key configured in Supabase Edge Functions environment
 
 ## Project Structure
 - **Frontend**: React + Vite application in `frontend/` directory
