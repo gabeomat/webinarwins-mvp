@@ -68,7 +68,7 @@ export default function WebinarDetail() {
           )
         `)
         .eq('attendees.webinar_id', id)
-        .order('created_at', { ascending: false })
+        .order('generated_at', { ascending: false })
 
       if (emailsError) throw emailsError
       setEmails(emailsData || [])
