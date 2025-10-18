@@ -8,7 +8,7 @@ const corsHeaders = {
 }
 
 const MAX_RETRIES = 3
-const OPENAI_TIMEOUT = 60000
+const PARALLEL_BATCH_SIZE = 5
 
 Deno.serve(async (req: Request) => {
   try {
@@ -86,10 +86,10 @@ Deno.serve(async (req: Request) => {
     const errors: string[] = []
     const tierBreakdown: Record<string, number> = {}
 
-    for (const attendee of attendees || []) {
+    // Process attendees in parallel batches
+    const processAttendee = async (attendee: any) => {
       const tierKey = attendee.engagement_tier || 'Unknown'
-      tierBreakdown[tierKey] = (tierBreakdown[tierKey] || 0)
-
+      
       try {
         const { data: existingEmail } = await supabaseClient
           .from('generated_emails')
@@ -98,16 +98,17 @@ Deno.serve(async (req: Request) => {
           .maybeSingle()
 
         if (existingEmail && !regenerate) {
-          skipped++
-          continue
+          return { status: 'skipped', tierKey }
         }
 
         const emailContent = await generateEmailWithRetry(openai, attendee, webinar)
 
         if (!validateEmailContent(emailContent.subject, emailContent.body)) {
-          failed++
-          errors.push(`Generated email for ${attendee.name} failed validation`)
-          continue
+          return { 
+            status: 'failed', 
+            tierKey, 
+            error: `Generated email for ${attendee.name} failed validation` 
+          }
         }
 
         if (existingEmail) {
@@ -135,11 +136,31 @@ Deno.serve(async (req: Request) => {
             })
         }
 
-        successful++
-        tierBreakdown[tierKey] = (tierBreakdown[tierKey] || 0) + 1
+        return { status: 'success', tierKey }
       } catch (error) {
-        failed++
-        errors.push(`Failed for ${attendee.name}: ${error.message}`)
+        return { 
+          status: 'failed', 
+          tierKey, 
+          error: `Failed for ${attendee.name}: ${error.message}` 
+        }
+      }
+    }
+
+    // Process in batches to avoid overwhelming the system
+    for (let i = 0; i < (attendees || []).length; i += PARALLEL_BATCH_SIZE) {
+      const batch = (attendees || []).slice(i, i + PARALLEL_BATCH_SIZE)
+      const results = await Promise.all(batch.map(processAttendee))
+      
+      for (const result of results) {
+        if (result.status === 'success') {
+          successful++
+          tierBreakdown[result.tierKey] = (tierBreakdown[result.tierKey] || 0) + 1
+        } else if (result.status === 'failed') {
+          failed++
+          if (result.error) errors.push(result.error)
+        } else if (result.status === 'skipped') {
+          skipped++
+        }
       }
     }
 
@@ -416,14 +437,13 @@ async function generateEmail(openai: OpenAI, attendee: any, webinar: any) {
   const userPrompt = buildTierPrompt(attendee, webinar, chatContext)
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
+    model: 'gpt-4o-mini',
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
     ],
     max_tokens: 2000,
     temperature: 0.8,
-    timeout: OPENAI_TIMEOUT,
   })
 
   const content = response.choices[0].message.content || ''
@@ -446,7 +466,7 @@ async function generateEmail(openai: OpenAI, attendee: any, webinar: any) {
       })),
       ai_selection_info: {
         selected_probability: parsed.probability,
-        model_used: 'gpt-4o',
+        model_used: 'gpt-4o-mini',
         generation_method: '3-version-selection',
       },
       tokens_consumed: response.usage?.total_tokens || 0,
