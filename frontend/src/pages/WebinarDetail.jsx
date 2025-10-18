@@ -97,19 +97,27 @@ export default function WebinarDetail() {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
+        signal: AbortSignal.timeout(180000), // 3 minute timeout
       })
 
-      const result = await response.json()
-
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to generate emails')
+        const result = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(result.error || `Server error: ${response.status}`)
       }
 
+      const result = await response.json()
       console.log('Email generation result:', result)
       
       const { emails_generated, details } = result
+      
+      if (details?.failed > 0) {
+        console.error('Email generation errors:', details.errors)
+      }
+      
       const message = details?.skipped > 0 
-        ? `✅ Generated ${emails_generated} new emails! (Skipped ${details.skipped} existing emails)`
+        ? `✅ Generated ${emails_generated} new emails! (Skipped ${details.skipped} existing emails${details.failed > 0 ? `, ${details.failed} failed` : ''})`
+        : details?.failed > 0
+        ? `⚠️ Generated ${emails_generated} emails successfully, but ${details.failed} failed. Check console for details.`
         : `✅ Generated ${emails_generated} emails successfully!`
       
       alert(message)
@@ -117,7 +125,11 @@ export default function WebinarDetail() {
       setShowEmailSection(true)
     } catch (error) {
       console.error('Error generating emails:', error)
-      alert(`❌ Error: ${error.message}`)
+      if (error.name === 'TimeoutError') {
+        alert(`❌ Request timed out. Try generating for fewer attendees at once (e.g., just Hot or Warm leads).`)
+      } else {
+        alert(`❌ Error: ${error.message}`)
+      }
     } finally {
       setGeneratingEmails(false)
     }
