@@ -80,7 +80,7 @@ export default function WebinarDetail() {
     }
   }
 
-  const generateEmails = async (tier = null) => {
+  const generateEmails = async (tier = null, regenerate = false) => {
     setGeneratingEmails(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -89,6 +89,7 @@ export default function WebinarDetail() {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
       let url = `${supabaseUrl}/functions/v1/generate-emails?webinar_id=${id}`
       if (tier) url += `&tier=${encodeURIComponent(tier)}`
+      if (regenerate) url += `&regenerate=true`
 
       const response = await fetch(url, {
         method: 'POST',
@@ -104,7 +105,14 @@ export default function WebinarDetail() {
         throw new Error(result.error || 'Failed to generate emails')
       }
 
-      alert(`✅ Generated ${result.emails_generated} emails successfully!`)
+      console.log('Email generation result:', result)
+      
+      const { emails_generated, details } = result
+      const message = details?.skipped > 0 
+        ? `✅ Generated ${emails_generated} new emails! (Skipped ${details.skipped} existing emails)`
+        : `✅ Generated ${emails_generated} emails successfully!`
+      
+      alert(message)
       await fetchEmails()
       setShowEmailSection(true)
     } catch (error) {
@@ -450,6 +458,29 @@ export default function WebinarDetail() {
                       NO-SHOWS
                     </Button>
                   </div>
+                  {emails.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-brutal-black/20">
+                      <p className="text-xs text-gray-600 mb-2">Re-generate emails (replaces existing):</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          onClick={() => generateEmails(null, true)}
+                          disabled={generatingEmails}
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          🔄 REGENERATE ALL
+                        </Button>
+                        <Button
+                          onClick={() => generateEmails('Warm Lead', true)}
+                          disabled={generatingEmails}
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          🔄 REGENERATE WARM
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {emails.length > 0 && (
