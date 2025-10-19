@@ -103,6 +103,11 @@ Deno.serve(async (req: Request) => {
 
         const emailContent = await generateEmailWithRetry(openai, attendee, webinar)
 
+        // Sanitize any remaining placeholders
+        const sanitized = sanitizeEmailContent(emailContent.subject, emailContent.body)
+        emailContent.subject = sanitized.subject
+        emailContent.body = sanitized.body
+
         if (!validateEmailContent(emailContent.subject, emailContent.body)) {
           return { 
             status: 'failed', 
@@ -494,6 +499,31 @@ async function generateEmailWithRetry(openai: OpenAI, attendee: any, webinar: an
   }
 
   throw new Error(`Failed to generate email after ${maxRetries} attempts: ${lastError?.message}`)
+}
+
+function sanitizeEmailContent(subject: string, body: string): { subject: string; body: string } {
+  const placeholderReplacements: Record<string, string> = {
+    '[your name]': 'Gabriel',
+    '[Your Name]': 'Gabriel',
+    '[YOUR NAME]': 'Gabriel',
+    '[name]': 'Gabriel',
+    '[Name]': 'Gabriel',
+    '[insert details]': '',
+    '[Insert Details]': '',
+    '[details]': '',
+    '[Details]': '',
+  }
+
+  let cleanSubject = subject
+  let cleanBody = body
+
+  for (const [placeholder, replacement] of Object.entries(placeholderReplacements)) {
+    const regex = new RegExp(placeholder.replace(/\[/g, '\\[').replace(/\]/g, '\\]'), 'gi')
+    cleanSubject = cleanSubject.replace(regex, replacement)
+    cleanBody = cleanBody.replace(regex, replacement)
+  }
+
+  return { subject: cleanSubject.trim(), body: cleanBody.trim() }
 }
 
 function validateEmailContent(subject: string, body: string): boolean {
