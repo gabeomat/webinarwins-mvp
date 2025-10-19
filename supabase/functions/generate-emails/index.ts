@@ -434,6 +434,79 @@ function parseAIResponse(responseText: string): { subject: string; body: string;
   return { subject, body, probability }
 }
 
+async function refineEmailStyle(openai: OpenAI, subject: string, body: string, attendeeName: string): Promise<{ subject: string; body: string }> {
+  const styleGuide = `1. Conversational & Relatable:
+Casual, chatty tone like you're sitting down with a friend or trusted colleague. Uses contractions, informal phrasing ("let me tell you," "fucking," "wham bam thank you ma'am"), and direct address. Authentic, not polished or overly corporate.
+
+2. Vulnerable & Honest:
+Openly shares struggles, emotions, and setbacks—emotional overwhelm, anxiety, moments of feeling "frozen like a stupid Disney princess." Authentic storytelling with no filter that builds trust and empathy.
+
+3. Storytelling with Narrative Flow:
+Personal and episodic, with broad reflection, specific moments, and resolution with lessons learned.
+
+4. Bold & Edgy Language:
+Deliberate use of profanity and blunt phrasing ("shit hits the fan," "freaking the fuck out," "this mtherfcker") that amplifies emotional intensity and signals a no-nonsense, rebellious personality.
+
+5. Metaphorical & Playful Imagery:
+Playful metaphors and similes that add color and humor—"mindset Hunger Games," "tennis match between mindset and reality like Serena and Venus," "like hairspray and a lighter can take down any size spider."
+
+6. Self-Aware & Reflective:
+Reflects on reactions and mindset shifts ("learning the art of separation anxiety," "business IS emotional, but how you react is what separates you from the pack").
+
+7. Purposeful Structure:
+Short paragraphs, deliberate line breaks, emphasis on key moments. Easy to read and skim.
+
+8. Calls to Action & Engagement:
+Nudges readers toward action or reflection ("hope this helps your cooler head prevail") while maintaining engagement without being pushy.`
+
+  const refinementPrompt = `Rewrite this follow-up email in Gabriel's authentic voice using the style guide below.
+
+ORIGINAL EMAIL:
+Subject: ${subject}
+
+${body}
+
+STYLE GUIDE:
+${styleGuide}
+
+CRITICAL REQUIREMENTS:
+- Keep the core message and ALL specific details (webinar topic, offer details, chat references, etc.)
+- Maintain the greeting to ${attendeeName}
+- Rewrite in Gabriel's raw, conversational, edgy style
+- Use short paragraphs and natural breaks
+- Add bold language where it feels authentic (you can swear if it fits)
+- Keep it concise and easy to skim
+- MUST end with exactly: "Warmly,\nGabriel"
+- Maximum 500 words
+- NO placeholders or brackets anywhere
+
+Return format:
+Subject: [rewritten subject]
+
+[rewritten body in Gabriel's voice]`
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a writing style coach helping rewrite emails to match a specific authentic voice. Preserve all factual content while transforming the tone and style.',
+      },
+      { role: 'user', content: refinementPrompt },
+    ],
+    max_tokens: 2000,
+    temperature: 0.7,
+  })
+
+  const content = response.choices[0].message.content || ''
+  const refined = parseAIResponse(content)
+
+  return {
+    subject: refined.subject,
+    body: refined.body,
+  }
+}
+
 async function generateEmail(openai: OpenAI, attendee: any, webinar: any) {
   const chatMessages = attendee.chat_messages || []
   const chatContext = chatMessages.length > 0
@@ -443,6 +516,7 @@ async function generateEmail(openai: OpenAI, attendee: any, webinar: any) {
   const systemPrompt = buildSystemPrompt()
   const userPrompt = buildTierPrompt(attendee, webinar, chatContext)
 
+  // First pass: Generate initial email
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
@@ -456,9 +530,12 @@ async function generateEmail(openai: OpenAI, attendee: any, webinar: any) {
   const content = response.choices[0].message.content || ''
   const parsed = parseAIResponse(content)
 
+  // Second pass: Refine with Gabriel's style
+  const refined = await refineEmailStyle(openai, parsed.subject, parsed.body, attendee.name)
+
   return {
-    subject: parsed.subject,
-    body: parsed.body,
+    subject: refined.subject,
+    body: refined.body,
     metadata: {
       engagement_score: attendee.engagement_score,
       engagement_tier: attendee.engagement_tier,
@@ -474,7 +551,7 @@ async function generateEmail(openai: OpenAI, attendee: any, webinar: any) {
       ai_selection_info: {
         selected_probability: parsed.probability,
         model_used: 'gpt-4o-mini',
-        generation_method: '3-version-selection',
+        generation_method: '3-version-selection-with-style-refinement',
       },
       tokens_consumed: response.usage?.total_tokens || 0,
       temperature: 0.8,
