@@ -31,6 +31,21 @@ WebinarWins is a React-based web application that helps webinar hosts automate p
 
 ## Recent Changes (October 19, 2025)
 
+### Rich Text Editing for Emails (NEW!)
+- ✅ **Added rich text editor (React-Quill) for all email editing:**
+  - Bold, italic, underline formatting
+  - Hyperlinks
+  - Ordered and bulleted lists
+  - Clean toolbar with neo-brutalist styling (4px black borders, yellow hover states)
+  - Applied to:
+    - No-show email template editor (UploadWebinar page)
+    - Generated email editor (WebinarDetail page)
+  - HTML rendering properly displays formatted emails
+  - Email content styling matches neo-brutalist theme
+  - **Security note**: For SaaS deployment, HTML sanitization (DOMPurify) must be implemented to prevent XSS attacks (see Security Considerations section)
+
+## Previous Changes (October 19, 2025)
+
 ### No-Show Email Templates (NEW!)
 - ✅ **Added template-based email generation for no-shows:**
   - Create reusable email templates per webinar (pre-filled by default in UploadWebinar page)
