@@ -48,25 +48,34 @@ Use these variables in your templates (they'll be automatically replaced):
 - `{deadline}` - Offer deadline
 - `{replay_url}` - Replay URL
 
-### 3. Generation
+### 3. Preview & Test
 
-When you click "GENERATE NO-SHOWS" or "NO-SHOWS":
-- If template exists → instant generation using template
-- If no template → falls back to AI generation
+On the WebinarDetail page, you'll see a new **"No-Show Email Template"** section with:
 
-The system automatically:
-1. Takes your template
-2. Replaces all `{variables}` with actual data
-3. Creates emails in database
-4. Ready to review/send via Resend
+**Preview**:
+- Shows your template with ONE real no-show's data
+- See exactly what the email will look like
 
-### 4. Review & Send
+**Send Test Email**:
+- Enter your email address
+- Receive the preview email in your inbox
+- Review it before bulk sending
 
-Templates work exactly like AI-generated emails:
-- Appear in the emails list
-- Can be edited before sending
-- Send via Resend integration
-- Track sent status
+**Bulk Send**:
+- Click "SEND TO ALL X NO-SHOWS"
+- Confirms before sending
+- Generates + sends all emails instantly
+- No database clutter (emails only saved after sending)
+
+### 4. How It Works
+
+When you click "SEND TO ALL NO-SHOWS":
+1. Fetches webinar template from database
+2. For each no-show attendee:
+   - Replaces `{name}`, `{replay_url}`, etc. with their data
+   - Sends email via Resend API
+   - Saves to database with "sent" status
+3. Returns success count
 
 ## Example Comparison
 

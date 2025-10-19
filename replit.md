@@ -33,14 +33,18 @@ WebinarWins is a React-based web application that helps webinar hosts automate p
 
 ### No-Show Email Templates (NEW!)
 - ✅ **Added template-based email generation for no-shows:**
-  - Create reusable email templates per webinar (optional)
+  - Create reusable email templates per webinar (pre-filled by default in UploadWebinar page)
   - Variable replacement: `{name}`, `{topic}`, `{replay_url}`, etc.
+  - **Preview & Test workflow:**
+    - Preview template with real attendee data on WebinarDetail page
+    - Send test email to your inbox to review before bulk sending
+    - Bulk send to all no-shows with one click (no database clutter)
   - Instant generation (100+ emails in seconds instead of minutes)
   - Zero AI cost for template-based emails
-  - Falls back to AI if no template provided
+  - Falls back to AI if template is deleted/empty
   - Database migration: `database-migrations/add-no-show-templates.sql`
-  - UI added to UploadWebinar page for template creation
-  - Edge Function updated to detect and use templates
+  - Edge Functions: `bulk-send-no-shows` (new), `send-email` (updated)
+  - Authorization enforced: users can only send emails for their own webinars
   - Full documentation: `NO-SHOW-TEMPLATES.md`
 
 ## Previous Changes (October 19, 2025)
