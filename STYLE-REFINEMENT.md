@@ -59,10 +59,28 @@ To verify style refinement is working:
 **Performance**: Adds ~2-3 seconds per email generation
 - Worth it for authentic, on-brand messaging
 
+## Parser Robustness
+
+The AI response parser has been enhanced to handle various formatting issues:
+
+**Handles:**
+- Markdown formatting (`**Subject:**` or `*text*`)
+- Case-insensitive subject line detection
+- Various probability marker formats
+- Separator lines (`---`)
+- Empty lines and whitespace variations
+
+**Fallback Behavior:**
+- If style refinement parsing fails → uses initial email instead of failing completely
+- Detailed error logs show exactly what was parsed and where it failed
+- Graceful degradation ensures email generation succeeds even with parsing issues
+
 ## Status
 ✅ **Deployed and Active** - Feature is live in production
 ✅ **Tested and Verified** - Logs confirm style transformation working
 ✅ **User Approved** - Refined emails match Gabriel's authentic voice
+✅ **Parser Robustness** - Handles markdown and various AI response formats
+✅ **Fallback Protection** - Never fails completely, uses initial email if refinement has issues
 
 ## Maintenance
 The style guide is embedded directly in the Edge Function code. To update Gabriel's voice:
