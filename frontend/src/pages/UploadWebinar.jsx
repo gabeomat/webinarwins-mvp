@@ -163,7 +163,7 @@ export default function UploadWebinar() {
       const chatMessages = []
 
       for (const row of chatData) {
-        const email = row.Email?.toLowerCase().trim()
+        const email = (row.Email || row.email)?.toLowerCase().trim()
         if (!email || !emailToIdMap.has(email)) continue
 
         const attendeeId = emailToIdMap.get(email)
@@ -178,7 +178,7 @@ export default function UploadWebinar() {
         chatMessages.push({
           attendee_id: attendeeId,
           message_text: message,
-          timestamp: row.Timestamp ? new Date(row.Timestamp) : new Date(),
+          timestamp: (row.Timestamp || row['date & time']) ? new Date(row.Timestamp || row['date & time']) : new Date(),
           is_question: isQuestion,
         })
       }
