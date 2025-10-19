@@ -24,33 +24,56 @@ Deno.serve(async (req: Request) => {
 
     const supabaseClient = createClient(supabaseUrl, supabaseKey)
     
-    const { email_id, override_email, override_subject, override_body } = await req.json()
+    const { email_id, attendee_id, override_email, override_subject, override_body } = await req.json()
 
-    if (!email_id) {
+    let emailData = null
+    let attendeeData = null
+
+    // If email_id provided, get from generated_emails table
+    if (email_id) {
+      const { data, error: emailError } = await supabaseClient
+        .from('generated_emails')
+        .select('*, attendees(email, name)')
+        .eq('id', email_id)
+        .single()
+
+      if (emailError || !data) {
+        return new Response(
+          JSON.stringify({ error: 'Email not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      emailData = data
+
+      // Check if already sent (skip check if using override email for testing)
+      if (emailData.sent_status === 'sent' && !override_email) {
+        return new Response(
+          JSON.stringify({ error: 'Email already sent' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    } 
+    // If attendee_id provided (for template test emails)
+    else if (attendee_id) {
+      const { data, error: attendeeError } = await supabaseClient
+        .from('attendees')
+        .select('email, name')
+        .eq('id', attendee_id)
+        .single()
+
+      if (attendeeError || !data) {
+        return new Response(
+          JSON.stringify({ error: 'Attendee not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      attendeeData = data
+    } 
+    else {
       return new Response(
-        JSON.stringify({ error: 'email_id is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Get the email from database
-    const { data: emailData, error: emailError } = await supabaseClient
-      .from('generated_emails')
-      .select('*, attendees(email, name)')
-      .eq('id', email_id)
-      .single()
-
-    if (emailError || !emailData) {
-      return new Response(
-        JSON.stringify({ error: 'Email not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Check if already sent (skip check if using override email for testing)
-    if (emailData.sent_status === 'sent' && !override_email) {
-      return new Response(
-        JSON.stringify({ error: 'Email already sent' }),
+        JSON.stringify({ error: 'email_id or attendee_id is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -70,9 +93,17 @@ Deno.serve(async (req: Request) => {
     }
 
     // Use override values if provided (for testing), otherwise use database values
-    const toEmail = override_email || emailData.attendees.email
-    const subject = override_subject || emailData.subject_line
-    const body = override_body || emailData.email_body_text
+    const toEmail = override_email || (emailData ? emailData.attendees.email : attendeeData.email)
+    const subject = override_subject || (emailData ? emailData.subject_line : '')
+    const body = override_body || (emailData ? emailData.email_body_text : '')
+
+    // Validate required fields
+    if (!toEmail || !subject || !body) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required email fields (to, subject, or body)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     const resendResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -95,8 +126,8 @@ Deno.serve(async (req: Request) => {
 
     const resendResult = await resendResponse.json()
 
-    // Update email status in database (only if not using override email for testing)
-    if (!override_email) {
+    // Update email status in database (only if not using override email for testing and email_id exists)
+    if (!override_email && email_id) {
       const { error: updateError } = await supabaseClient
         .from('generated_emails')
         .update({

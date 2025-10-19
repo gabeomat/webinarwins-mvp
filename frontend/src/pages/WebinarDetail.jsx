@@ -17,6 +17,10 @@ export default function WebinarDetail() {
   const [emailFilter, setEmailFilter] = useState('all')
   const [editingEmail, setEditingEmail] = useState(null)
   const [showEmailSection, setShowEmailSection] = useState(false)
+  const [showTemplatePreview, setShowTemplatePreview] = useState(false)
+  const [testEmail, setTestEmail] = useState('')
+  const [sendingTest, setSendingTest] = useState(false)
+  const [bulkSending, setBulkSending] = useState(false)
 
   useEffect(() => {
     fetchWebinarData()
@@ -310,6 +314,106 @@ export default function WebinarDetail() {
     }
   }
 
+  const replaceTemplateVariables = (template, attendee) => {
+    const variables = {
+      name: attendee.name || '',
+      topic: webinar.topic || '',
+      offer_name: webinar.offer_name || '',
+      offer_description: webinar.offer_description || '',
+      price: webinar.price ? `$${webinar.price}` : '',
+      deadline: webinar.deadline || '',
+      replay_url: webinar.replay_url || '',
+    }
+
+    let result = template
+    for (const [key, value] of Object.entries(variables)) {
+      const regex = new RegExp(`\\{${key}\\}`, 'g')
+      result = result.replace(regex, value)
+    }
+    return result
+  }
+
+  const getTemplatePreview = () => {
+    if (!webinar.no_show_template_subject || !webinar.no_show_template_body) {
+      return null
+    }
+
+    const noShows = attendees.filter(a => a.engagement_tier === 'No-Show')
+    if (noShows.length === 0) {
+      return null
+    }
+
+    const sampleAttendee = noShows[0]
+    return {
+      attendee: sampleAttendee,
+      subject: replaceTemplateVariables(webinar.no_show_template_subject, sampleAttendee),
+      body: replaceTemplateVariables(webinar.no_show_template_body, sampleAttendee),
+      totalNoShows: noShows.length,
+    }
+  }
+
+  const sendTestEmail = async () => {
+    if (!testEmail || !testEmail.includes('@')) {
+      alert('Please enter a valid email address')
+      return
+    }
+
+    const preview = getTemplatePreview()
+    if (!preview) return
+
+    setSendingTest(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
+          override_email: testEmail,
+          override_subject: preview.subject,
+          override_body: preview.body,
+          attendee_id: preview.attendee.id,
+        },
+      })
+
+      if (error) throw error
+      if (data.error) throw new Error(data.error)
+
+      alert(`✅ Test email sent to ${testEmail}!`)
+      setTestEmail('')
+    } catch (error) {
+      console.error('Error sending test email:', error)
+      alert(`Failed to send test email: ${error.message}`)
+    } finally {
+      setSendingTest(false)
+    }
+  }
+
+  const bulkSendNoShows = async () => {
+    const preview = getTemplatePreview()
+    if (!preview) return
+
+    if (!confirm(`Send no-show emails to ${preview.totalNoShows} attendees? This will use your template and send via Resend.`)) {
+      return
+    }
+
+    setBulkSending(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('bulk-send-no-shows', {
+        body: {
+          webinar_id: id,
+        },
+      })
+
+      if (error) throw error
+      if (data.error) throw new Error(data.error)
+
+      alert(`✅ Successfully sent ${data.sent} emails to no-shows!${data.failed > 0 ? ` (${data.failed} failed)` : ''}`)
+      await fetchEmails()
+    } catch (error) {
+      console.error('Error bulk sending:', error)
+      alert(`Failed to send emails: ${error.message}`)
+    } finally {
+      setBulkSending(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-brutal-yellow" style={{
       backgroundImage: `repeating-linear-gradient(
@@ -443,6 +547,91 @@ export default function WebinarDetail() {
         {filteredAttendees.length === 0 && (
           <div className="bg-white border-brutal border-brutal-black shadow-brutal p-12 text-center mt-8">
             <p className="font-black text-xl">NO ATTENDEES MATCH THIS FILTER</p>
+          </div>
+        )}
+
+        {/* No-Show Template Preview & Bulk Send */}
+        {getTemplatePreview() && (
+          <div className="mt-12">
+            <div className="bg-brutal-lime border-brutal border-brutal-black shadow-brutal p-6 mb-6">
+              <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+                <div>
+                  <h2 className="text-2xl font-black uppercase">No-Show Email Template</h2>
+                  <p className="text-sm font-bold mt-1">{getTemplatePreview().totalNoShows} no-shows ready to contact</p>
+                </div>
+                <Button
+                  onClick={() => setShowTemplatePreview(!showTemplatePreview)}
+                  variant="outline"
+                >
+                  {showTemplatePreview ? 'HIDE' : 'PREVIEW'} TEMPLATE
+                </Button>
+              </div>
+
+              {showTemplatePreview && (
+                <>
+                  <div className="border-t-brutal border-brutal-black pt-4 mb-4">
+                    <div className="bg-white border-brutal border-brutal-black p-4 mb-4">
+                      <p className="text-xs text-gray-600 mb-3">
+                        <strong>Preview using:</strong> {getTemplatePreview().attendee.name} ({getTemplatePreview().attendee.email})
+                      </p>
+                      <div className="mb-4">
+                        <label className="block text-xs font-black uppercase text-gray-700 mb-1">Subject Line:</label>
+                        <div className="bg-gray-50 border border-gray-300 p-3 font-bold">
+                          {getTemplatePreview().subject}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black uppercase text-gray-700 mb-1">Email Body:</label>
+                        <div className="bg-gray-50 border border-gray-300 p-3 font-mono text-sm whitespace-pre-wrap">
+                          {getTemplatePreview().body}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Test Email Section */}
+                    <div className="bg-brutal-cyan/20 border-brutal border-brutal-black p-4 mb-4">
+                      <h3 className="font-black text-sm uppercase mb-3">📧 Send Test Email</h3>
+                      <div className="flex gap-2 flex-wrap">
+                        <input
+                          type="email"
+                          value={testEmail}
+                          onChange={(e) => setTestEmail(e.target.value)}
+                          placeholder="your@email.com"
+                          className="flex-1 min-w-[200px] px-4 py-2 border-brutal border-brutal-black bg-white font-bold focus:outline-none focus:ring-2 focus:ring-brutal-cyan"
+                        />
+                        <Button
+                          onClick={sendTestEmail}
+                          disabled={sendingTest || !testEmail}
+                          loading={sendingTest}
+                          variant="secondary"
+                        >
+                          SEND TEST
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-700 mt-2">
+                        Send this preview email to yourself to see exactly what it looks like
+                      </p>
+                    </div>
+
+                    {/* Bulk Send Section */}
+                    <div className="bg-brutal-pink/20 border-brutal border-brutal-black p-4">
+                      <h3 className="font-black text-sm uppercase mb-3">🚀 Bulk Send to All No-Shows</h3>
+                      <Button
+                        onClick={bulkSendNoShows}
+                        disabled={bulkSending}
+                        loading={bulkSending}
+                        size="lg"
+                      >
+                        SEND TO ALL {getTemplatePreview().totalNoShows} NO-SHOWS
+                      </Button>
+                      <p className="text-xs text-gray-700 mt-2">
+                        ✨ Instant generation + sending via Resend. No AI cost, no database clutter!
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
 
