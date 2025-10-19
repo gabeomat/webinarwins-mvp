@@ -156,20 +156,37 @@ export default function WebinarDetail() {
     }
   }
 
-  const sendEmail = async (emailId, recipientName) => {
-    if (!confirm(`Send this email to ${recipientName}?`)) {
+  const sendEmail = async (emailId, recipientName, overrideEmail = null, overrideSubject = null, overrideBody = null) => {
+    // For confirmation, show override email if provided, otherwise show recipient name
+    const confirmMessage = overrideEmail 
+      ? `Send this email to ${overrideEmail}? (TEST MODE - won't mark as sent in database)`
+      : `Send this email to ${recipientName}?`
+    
+    if (!confirm(confirmMessage)) {
       return
     }
 
     try {
+      const requestBody = { email_id: emailId }
+      
+      // Add override parameters if provided
+      if (overrideEmail) requestBody.override_email = overrideEmail
+      if (overrideSubject) requestBody.override_subject = overrideSubject
+      if (overrideBody) requestBody.override_body = overrideBody
+      
       const { data, error } = await supabase.functions.invoke('send-email', {
-        body: { email_id: emailId }
+        body: requestBody
       })
 
       if (error) throw error
 
-      alert(`✅ Email sent successfully to ${recipientName}!`)
+      const successMessage = data?.test_mode 
+        ? `✅ TEST email sent to ${overrideEmail}! (Original email status unchanged)`
+        : `✅ Email sent successfully!`
+      
+      alert(successMessage)
       await fetchEmails()
+      setEditingEmail(null)
     } catch (error) {
       console.error('Error sending email:', error)
       alert(`❌ Failed to send email: ${error.message}`)
@@ -561,6 +578,19 @@ export default function WebinarDetail() {
                             {editingEmail === email.id ? (
                               <div>
                                 <div className="mb-3">
+                                  <label className="block text-xs font-black mb-1">
+                                    RECIPIENT EMAIL: 
+                                    <span className="ml-2 text-xs font-normal text-gray-600">(Change to your email for testing)</span>
+                                  </label>
+                                  <input
+                                    type="email"
+                                    defaultValue={email.attendees.email}
+                                    id={`recipient-${email.id}`}
+                                    className="w-full border-brutal border-brutal-black p-2 font-mono text-sm"
+                                    placeholder="test@example.com"
+                                  />
+                                </div>
+                                <div className="mb-3">
                                   <label className="block text-xs font-black mb-1">SUBJECT:</label>
                                   <input
                                     type="text"
@@ -591,6 +621,18 @@ export default function WebinarDetail() {
                                     size="sm"
                                   >
                                     SAVE
+                                  </Button>
+                                  <Button
+                                    onClick={() => {
+                                      const recipientEmail = document.getElementById(`recipient-${email.id}`).value
+                                      const subject = document.getElementById(`subject-${email.id}`).value
+                                      const body = document.getElementById(`body-${email.id}`).value
+                                      sendEmail(email.id, email.attendees.name, recipientEmail, subject, body)
+                                    }}
+                                    size="sm"
+                                    variant="secondary"
+                                  >
+                                    SEND NOW
                                   </Button>
                                   <Button
                                     onClick={() => setEditingEmail(null)}
