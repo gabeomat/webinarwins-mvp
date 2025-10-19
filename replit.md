@@ -41,16 +41,15 @@ WebinarWins is a React-based web application that helps webinar hosts automate p
   - Updated UploadWebinar.jsx to accept flexible column headers: `email` (lowercase) and `date & time` as alternatives
   - Chat messages now properly save to database regardless of CSV header capitalization
   - Supports both standard (`Email`, `Timestamp`) and custom (`email`, `date & time`) column naming
-- ✅ **Email sending feature (ready for deployment):**
-  - Ability to send generated email drafts directly from the platform
+- ✅ **Email sending feature (fully functional):**
+  - Send generated email drafts directly from the platform
   - **Implementation**: Resend API for reliable delivery and email tracking (opens, clicks, delivery)
-  - ✅ Frontend Send button and sent status display implemented
-  - ✅ **Email override for testing**: Edit mode allows changing recipient email to send test emails without marking original as sent
-  - ✅ Database migration SQL created (`database-migrations/add-email-sent-tracking.sql`)
-  - ✅ Supabase Edge Function code written using Resend API (`supabase/functions/send-email/index.ts`)
-  - ✅ Edge Function supports override parameters for testing (override_email, override_subject, override_body)
-  - ⏳ **Deployment needed**: See `EMAIL-SENDING-SETUP.md` for complete setup instructions
-  - **Setup requires**: Resend API key (free tier: 3,000 emails/month) + Supabase Edge Function deployment
+  - **Testing workflow**: Click EDIT → change recipient email → click SEND NOW to test without marking original as sent
+  - **Production workflow**: Click SEND button to send to actual attendee (marks as sent with timestamp)
+  - Database tracks sent status and timestamp for each email
+  - Edge Function deployed with override parameters (override_email, override_subject, override_body)
+  - **Free tier**: 3,000 emails/month via Resend
+  - Complete setup guide available in `EMAIL-SENDING-SETUP.md`
 
 ## Project Structure
 - **Frontend**: React + Vite application in `frontend/` directory
