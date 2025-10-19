@@ -69,10 +69,26 @@ FROM_EMAIL=gabriel@yourdomain.com
 
 ### Step 5: Test Email Sending
 
+**Option A: Test with Override Email (Recommended)**
+
+This allows you to test emails by sending them to yourself without marking the original email as sent:
+
 1. Go to your app and generate emails for a webinar
-2. Click the **SEND** button on an email draft
-3. Confirm the send dialog
-4. Check that:
+2. Click the **EDIT** button on any email draft
+3. Change the **RECIPIENT EMAIL** field to your own email address
+4. Optionally edit the subject or body for testing
+5. Click **SEND NOW**
+6. Confirm the test send dialog (will say "TEST MODE")
+7. Check your inbox for the test email
+8. The original email status remains "draft" so you can still send it to the real recipient later
+
+**Option B: Send to Real Recipient**
+
+To send to the actual attendee:
+
+1. Click the **SEND** button on an email draft (without editing)
+2. Confirm the send dialog
+3. Check that:
    - The button changes to "✓ SENT" with a date
    - The email was received in the recipient's inbox
    - The email appears in your Resend dashboard

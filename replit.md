@@ -45,8 +45,10 @@ WebinarWins is a React-based web application that helps webinar hosts automate p
   - Ability to send generated email drafts directly from the platform
   - **Implementation**: Resend API for reliable delivery and email tracking (opens, clicks, delivery)
   - ✅ Frontend Send button and sent status display implemented
+  - ✅ **Email override for testing**: Edit mode allows changing recipient email to send test emails without marking original as sent
   - ✅ Database migration SQL created (`database-migrations/add-email-sent-tracking.sql`)
   - ✅ Supabase Edge Function code written using Resend API (`supabase/functions/send-email/index.ts`)
+  - ✅ Edge Function supports override parameters for testing (override_email, override_subject, override_body)
   - ⏳ **Deployment needed**: See `EMAIL-SENDING-SETUP.md` for complete setup instructions
   - **Setup requires**: Resend API key (free tier: 3,000 emails/month) + Supabase Edge Function deployment
 
