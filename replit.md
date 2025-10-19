@@ -47,6 +47,12 @@ WebinarWins is a React-based web application that helps webinar hosts automate p
   - Edge Function logs show before/after comparison for verification
   - Confirmed working in production - refined emails match Gabriel's voice
   - Edge Function deployed to Supabase and actively generating styled emails
+- ✅ **Fixed AI response parsing errors:**
+  - Made parser more robust to handle various AI response formats
+  - Added fallback mechanism: if style refinement fails, uses initial email instead of completely failing
+  - Prevents "Failed to parse AI response - missing subject or body" errors
+  - Added detailed error logging to help debug future parsing issues
+  - Fixed critical bug with separator line handling that caused crashes
 - ✅ **Fixed chat CSV upload:**
   - Updated UploadWebinar.jsx to accept flexible column headers: `email` (lowercase) and `date & time` as alternatives
   - Chat messages now properly save to database regardless of CSV header capitalization
