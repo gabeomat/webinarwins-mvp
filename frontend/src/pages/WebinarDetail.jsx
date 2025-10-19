@@ -520,12 +520,44 @@ export default function WebinarDetail() {
                           🔄 REGENERATE ALL
                         </Button>
                         <Button
+                          onClick={() => generateEmails('Hot Lead', true)}
+                          disabled={generatingEmails}
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          🔄 REGENERATE HOT
+                        </Button>
+                        <Button
                           onClick={() => generateEmails('Warm Lead', true)}
                           disabled={generatingEmails}
                           variant="outline"
                           className="text-xs"
                         >
                           🔄 REGENERATE WARM
+                        </Button>
+                        <Button
+                          onClick={() => generateEmails('Cool Lead', true)}
+                          disabled={generatingEmails}
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          🔄 REGENERATE COOL
+                        </Button>
+                        <Button
+                          onClick={() => generateEmails('Cold Lead', true)}
+                          disabled={generatingEmails}
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          🔄 REGENERATE COLD
+                        </Button>
+                        <Button
+                          onClick={() => generateEmails('No-Show', true)}
+                          disabled={generatingEmails}
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          🔄 REGENERATE NO-SHOWS
                         </Button>
                       </div>
                     </div>
