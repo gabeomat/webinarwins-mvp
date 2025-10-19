@@ -29,6 +29,15 @@ WebinarWins is a React-based web application that helps webinar hosts automate p
   - Includes loading states, error handling, and user-edited badges
   - Requires OpenAI API key configured in Supabase Edge Functions environment
 
+## Recent Changes (October 19, 2025)
+- ✅ **Fixed Supabase Edge Function for email generation:**
+  - Added database error checking for insert and update operations (previously failing silently)
+  - Increased email word count validation limit from 550 to 800 words to accommodate conversational tone
+  - Fixed database schema: changed `engagement_score` column in `generated_emails` table from INTEGER to NUMERIC to support decimal values (e.g., 53.9, 43.8)
+  - Edge Function now properly reports database errors when saves fail
+  - Email generation fully functional with proper error handling and validation
+  - All fixes applied to `supabase/functions/generate-emails/index.ts` (must be manually deployed in Supabase dashboard)
+
 ## Project Structure
 - **Frontend**: React + Vite application in `frontend/` directory
 - **Backend**: Uses Supabase (external service)
