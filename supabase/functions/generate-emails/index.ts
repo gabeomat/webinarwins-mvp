@@ -401,12 +401,20 @@ function parseAIResponse(responseText: string): { subject: string; body: string;
   let probability = 50
   let inBody = false
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
     const trimmed = line.trim()
+    
+    // Remove markdown formatting (**, *, etc.)
+    const cleaned = trimmed.replace(/^\*\*|\*\*$/g, '').replace(/^\*|\*$/g, '').trim()
 
     // Look for subject line (case-insensitive, flexible format)
-    if (trimmed.toLowerCase().startsWith('subject:')) {
-      subject = trimmed.substring(trimmed.indexOf(':') + 1).trim()
+    if (cleaned.toLowerCase().startsWith('subject:') || trimmed.toLowerCase().startsWith('subject:')) {
+      // Extract subject, removing markdown if present
+      const subjectLine = cleaned.toLowerCase().startsWith('subject:') ? cleaned : trimmed
+      subject = subjectLine.substring(subjectLine.indexOf(':') + 1).trim()
+      // Remove any remaining markdown asterisks from subject
+      subject = subject.replace(/^\*\*|\*\*$/g, '').replace(/^\*|\*$/g, '').trim()
       inBody = true
       continue
     }
@@ -428,20 +436,28 @@ function parseAIResponse(responseText: string): { subject: string; body: string;
       break
     }
 
-    // Collect body content
-    if (inBody && trimmed && !trimmed.startsWith('---')) {
-      bodyLines.push(line) // Keep original line with indentation
+    // Collect body content (skip empty lines at the start)
+    if (inBody && trimmed) {
+      // Don't add separator lines
+      if (!trimmed.startsWith('---')) {
+        bodyLines.push(line) // Keep original line with indentation
+      }
     }
   }
 
   // Join with single newlines to preserve paragraph breaks
-  const body = bodyLines.join('\n').trim()
+  let body = bodyLines.join('\n').trim()
+  
+  // Remove any leading/trailing markdown
+  body = body.replace(/^\*\*|\*\*$/g, '').trim()
 
   if (!subject || !body) {
     console.error('❌ Failed to parse AI response:')
     console.error('Raw response:', responseText)
     console.error('Parsed subject:', subject)
     console.error('Parsed body length:', body.length)
+    console.error('Body lines collected:', bodyLines.length)
+    console.error('First few body lines:', bodyLines.slice(0, 5))
     throw new Error(`Failed to parse AI response - missing ${!subject ? 'subject' : 'body'}`)
   }
 
