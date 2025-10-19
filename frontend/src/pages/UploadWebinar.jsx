@@ -20,8 +20,24 @@ export default function UploadWebinar() {
     price: '',
     deadline: '',
     replayUrl: '',
-    noShowTemplateSubject: '',
-    noShowTemplateBody: '',
+    noShowTemplateSubject: '{name}, catch the replay + a special bonus (today only)',
+    noShowTemplateBody: `Hey {name},
+
+I noticed you registered for the training today, "How to Build a Client-Facing GPT - The Right Way" but you weren't able to make it live.
+
+If you're anything like me, your attention is being pulled in a million different directions so I totally get it. Thought you might appreciate the replay instead so you can watch at your convenience.
+
+I go into much more detail than the PDF guide you got, and I think what we cover in this is SUPER IMPORTANT when it comes to building custom GPTs that really feel like an extension of you, for your clients.
+
+You can catch the replay HERE {replay_url}
+
+Oh and I want to be sure you at least know about a special bonus if you decide to join us in our Skool community, Futureproof - The Evolution Lab **today only**... Access to the How to Build Your AI CMO (Chief Marketing Officer) trained on YOUR business intelligence bundle. This one alone has saved me sooooo much time in my own business so I'm sharing the instructions and the knowledge base docs with you.
+
+You can check out Futureproof HERE: https://www.skool.com/futureproof-the-evolution-lab
+
+Here's to building the future ~
+
+~ G`,
   })
   const [attendanceFile, setAttendanceFile] = useState(null)
   const [chatFile, setChatFile] = useState(null)
@@ -351,8 +367,8 @@ export default function UploadWebinar() {
               </div>
               <div className="bg-brutal-lime/10 border-brutal border-brutal-black p-4 mb-4">
                 <p className="text-xs text-gray-700 mb-4">
-                  <strong>💡 Skip AI for no-shows!</strong> Create a template that will be used for all no-show emails. 
-                  No AI cost, instant generation. Variables you can use: <code className="bg-white px-1">{'{name}'}</code>, <code className="bg-white px-1">{'{topic}'}</code>, <code className="bg-white px-1">{'{offer_name}'}</code>, <code className="bg-white px-1">{'{replay_url}'}</code>
+                  <strong>✅ Your default no-show template is pre-filled below.</strong> This template will be used for all no-show emails (instant generation, no AI cost). 
+                  Edit the text to customize, or delete it completely to use AI generation instead. Variables: <code className="bg-white px-1">{'{name}'}</code>, <code className="bg-white px-1">{'{replay_url}'}</code>
                 </p>
               </div>
               <div className="space-y-4">
@@ -361,7 +377,6 @@ export default function UploadWebinar() {
                   name="noShowTemplateSubject"
                   value={formData.noShowTemplateSubject}
                   onChange={handleInputChange}
-                  placeholder="{name}, catch the replay + a special bonus (today only)"
                 />
                 <div>
                   <label className="block text-sm font-black uppercase text-brutal-black mb-2">
@@ -371,12 +386,11 @@ export default function UploadWebinar() {
                     name="noShowTemplateBody"
                     value={formData.noShowTemplateBody}
                     onChange={handleInputChange}
-                    rows={10}
-                    placeholder={`Hey {name},\n\nI noticed you registered for the training today, "How to Build a Client-Facing GPT - The Right Way" but you weren't able to make it live.\n\nIf you're anything like me, your attention is being pulled in a million different directions so I totally get it. Thought you might appreciate the replay instead so you can watch at your convenience.\n\nI go into much more detail than the PDF guide you got, and I think what we cover in this is SUPER IMPORTANT when it comes to building custom GPTs that really feel like an extension of you, for your clients.\n\nYou can catch the replay HERE {replay_url}\n\nOh and I want to be sure you at least know about a special bonus if you decide to join us in our Skool community, Futureproof - The Evolution Lab **today only**... Access to the How to Build Your AI CMO (Chief Marketing Officer) trained on YOUR business intelligence bundle. This one alone has saved me sooooo much time in my own business so I'm sharing the instructions and the knowledge base docs with you.\n\nYou can check out Futureproof HERE: https://www.skool.com/futureproof-the-evolution-lab\n\nHere's to building the future ~\n\n~ G`}
-                    className="w-full px-4 py-3 border-brutal border-brutal-black bg-white text-brutal-black font-bold placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-brutal-cyan font-mono text-sm"
+                    rows={12}
+                    className="w-full px-4 py-3 border-brutal border-brutal-black bg-white text-brutal-black font-bold focus:outline-none focus:ring-4 focus:ring-brutal-cyan font-mono text-sm"
                   />
                   <p className="text-xs text-gray-600 mt-2">
-                    Leave blank to use AI generation for no-shows (costs more, takes longer)
+                    ✨ Delete all text to use AI generation instead (costs more, takes longer)
                   </p>
                 </div>
               </div>
