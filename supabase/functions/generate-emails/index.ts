@@ -404,13 +404,16 @@ function parseAIResponse(responseText: string): { subject: string; body: string;
   for (const line of lines) {
     const trimmed = line.trim()
 
-    if (trimmed.startsWith('Subject:')) {
-      subject = trimmed.replace('Subject:', '').trim()
+    // Look for subject line (case-insensitive, flexible format)
+    if (trimmed.toLowerCase().startsWith('subject:')) {
+      subject = trimmed.substring(trimmed.indexOf(':') + 1).trim()
       inBody = true
       continue
     }
 
-    if (trimmed.includes('SELECTED VERSION PROBABILITY:')) {
+    // Stop at probability marker or separator
+    if (trimmed.includes('SELECTED VERSION PROBABILITY:') || 
+        trimmed.includes('PROBABILITY:')) {
       const probStr = trimmed.split(':')[1]?.trim().replace('%', '')
       try {
         probability = parseInt(probStr, 10)
@@ -419,16 +422,27 @@ function parseAIResponse(responseText: string): { subject: string; body: string;
       }
       break
     }
+    
+    // Stop at separator if we have body content
+    if (trimmed.startsWith('---') && bodyLines.length > 0) {
+      break
+    }
 
+    // Collect body content
     if (inBody && trimmed && !trimmed.startsWith('---')) {
-      bodyLines.push(trimmed)
+      bodyLines.push(line) // Keep original line with indentation
     }
   }
 
-  const body = bodyLines.join('\n\n').trim()
+  // Join with single newlines to preserve paragraph breaks
+  const body = bodyLines.join('\n').trim()
 
   if (!subject || !body) {
-    throw new Error('Failed to parse AI response - missing subject or body')
+    console.error('❌ Failed to parse AI response:')
+    console.error('Raw response:', responseText)
+    console.error('Parsed subject:', subject)
+    console.error('Parsed body length:', body.length)
+    throw new Error(`Failed to parse AI response - missing ${!subject ? 'subject' : 'body'}`)
   }
 
   return { subject, body, probability }
@@ -538,16 +552,26 @@ async function generateEmail(openai: OpenAI, attendee: any, webinar: any) {
   console.log(`\n${parsed.body}`)
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n')
 
-  // Second pass: Refine with Gabriel's style
-  const refined = await refineEmailStyle(openai, parsed.subject, parsed.body, attendee.name)
-
-  // Log the refined version
-  console.log('✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨')
-  console.log(`✨ REFINED EMAIL (Gabriel's voice) - ${attendee.name}`)
-  console.log('✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨')
-  console.log(`Subject: ${refined.subject}`)
-  console.log(`\n${refined.body}`)
-  console.log('✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨\n')
+  // Second pass: Refine with Gabriel's style (with fallback)
+  let refined = { subject: parsed.subject, body: parsed.body }
+  let refinementUsed = false
+  
+  try {
+    refined = await refineEmailStyle(openai, parsed.subject, parsed.body, attendee.name)
+    refinementUsed = true
+    
+    // Log the refined version
+    console.log('✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨')
+    console.log(`✨ REFINED EMAIL (Gabriel's voice) - ${attendee.name}`)
+    console.log('✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨')
+    console.log(`Subject: ${refined.subject}`)
+    console.log(`\n${refined.body}`)
+    console.log('✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨\n')
+  } catch (refinementError) {
+    console.warn('⚠️ Style refinement failed, using initial email:', refinementError.message)
+    // Fallback: use the initial email if refinement fails
+    refined = { subject: parsed.subject, body: parsed.body }
+  }
 
   return {
     subject: refined.subject,
