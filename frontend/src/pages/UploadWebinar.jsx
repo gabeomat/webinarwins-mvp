@@ -20,6 +20,8 @@ export default function UploadWebinar() {
     price: '',
     deadline: '',
     replayUrl: '',
+    noShowTemplateSubject: '',
+    noShowTemplateBody: '',
   })
   const [attendanceFile, setAttendanceFile] = useState(null)
   const [chatFile, setChatFile] = useState(null)
@@ -119,6 +121,8 @@ export default function UploadWebinar() {
           price: parseFloat(formData.price) || 0,
           deadline: formData.deadline || '',
           replay_url: formData.replayUrl || '',
+          no_show_template_subject: formData.noShowTemplateSubject || null,
+          no_show_template_body: formData.noShowTemplateBody || null,
         }])
         .select()
         .single()
@@ -338,6 +342,43 @@ export default function UploadWebinar() {
                   onChange={handleInputChange}
                   placeholder="https://..."
                 />
+              </div>
+            </div>
+
+            <div>
+              <div className="bg-brutal-black text-brutal-lime px-4 py-2 mb-4 inline-block">
+                <h3 className="text-xl font-black uppercase">NO-SHOW EMAIL TEMPLATE</h3>
+              </div>
+              <div className="bg-brutal-lime/10 border-brutal border-brutal-black p-4 mb-4">
+                <p className="text-xs text-gray-700 mb-4">
+                  <strong>💡 Skip AI for no-shows!</strong> Create a template that will be used for all no-show emails. 
+                  No AI cost, instant generation. Variables you can use: <code className="bg-white px-1">{'{name}'}</code>, <code className="bg-white px-1">{'{topic}'}</code>, <code className="bg-white px-1">{'{offer_name}'}</code>, <code className="bg-white px-1">{'{replay_url}'}</code>
+                </p>
+              </div>
+              <div className="space-y-4">
+                <Input
+                  label="Subject Line Template"
+                  name="noShowTemplateSubject"
+                  value={formData.noShowTemplateSubject}
+                  onChange={handleInputChange}
+                  placeholder="e.g., {name}, you missed something special! Here's the replay"
+                />
+                <div>
+                  <label className="block text-sm font-black uppercase text-brutal-black mb-2">
+                    Email Body Template
+                  </label>
+                  <textarea
+                    name="noShowTemplateBody"
+                    value={formData.noShowTemplateBody}
+                    onChange={handleInputChange}
+                    rows={8}
+                    placeholder={`Hey {name},\n\nI noticed you signed up for our webinar on {topic} but couldn't make it. Life gets busy — I totally get it!\n\nThe good news? You haven't missed out. I've got the full replay ready for you:\n{replay_url}\n\nIn this session, we covered [key takeaways]. If this resonates with you, I'd love to have you join {offer_name}.\n\nWarmly,\nGabriel`}
+                    className="w-full px-4 py-3 border-brutal border-brutal-black bg-white text-brutal-black font-bold placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-brutal-cyan font-mono text-sm"
+                  />
+                  <p className="text-xs text-gray-600 mt-2">
+                    Leave blank to use AI generation for no-shows (costs more, takes longer)
+                  </p>
+                </div>
               </div>
             </div>
 

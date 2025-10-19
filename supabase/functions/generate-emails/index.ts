@@ -10,6 +10,30 @@ const corsHeaders = {
 const MAX_RETRIES = 3
 const PARALLEL_BATCH_SIZE = 5
 
+function generateFromTemplate(attendee: any, webinar: any): { subject: string; body: string } {
+  const variables: Record<string, string> = {
+    name: attendee.name || '',
+    topic: webinar.topic || '',
+    offer_name: webinar.offer_name || '',
+    offer_description: webinar.offer_description || '',
+    price: webinar.price ? `$${webinar.price}` : '',
+    deadline: webinar.deadline || '',
+    replay_url: webinar.replay_url || '',
+  }
+
+  let subject = webinar.no_show_template_subject || ''
+  let body = webinar.no_show_template_body || ''
+
+  // Replace all variables in the template
+  for (const [key, value] of Object.entries(variables)) {
+    const regex = new RegExp(`\\{${key}\\}`, 'g')
+    subject = subject.replace(regex, value)
+    body = body.replace(regex, value)
+  }
+
+  return { subject, body }
+}
+
 Deno.serve(async (req: Request) => {
   try {
     if (req.method === 'OPTIONS') {
@@ -101,7 +125,28 @@ Deno.serve(async (req: Request) => {
           return { status: 'skipped', tierKey }
         }
 
-        const emailContent = await generateEmailWithRetry(openai, attendee, webinar)
+        let emailContent: any
+        
+        // Check if this is a no-show and if a template exists
+        if (attendee.engagement_tier === 'No-Show' && 
+            webinar.no_show_template_subject && 
+            webinar.no_show_template_body) {
+          // Use template instead of AI
+          const templateResult = generateFromTemplate(attendee, webinar)
+          emailContent = {
+            subject: templateResult.subject,
+            body: templateResult.body,
+            metadata: {
+              engagement_score: attendee.engagement_score,
+              engagement_tier: attendee.engagement_tier,
+              generation_method: 'template',
+              template_used: true,
+            },
+          }
+        } else {
+          // Use AI generation
+          emailContent = await generateEmailWithRetry(openai, attendee, webinar)
+        }
 
         // Sanitize any remaining placeholders
         const sanitized = sanitizeEmailContent(emailContent.subject, emailContent.body)

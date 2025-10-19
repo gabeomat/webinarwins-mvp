@@ -30,6 +30,20 @@ WebinarWins is a React-based web application that helps webinar hosts automate p
   - Requires OpenAI API key configured in Supabase Edge Functions environment
 
 ## Recent Changes (October 19, 2025)
+
+### No-Show Email Templates (NEW!)
+- ✅ **Added template-based email generation for no-shows:**
+  - Create reusable email templates per webinar (optional)
+  - Variable replacement: `{name}`, `{topic}`, `{replay_url}`, etc.
+  - Instant generation (100+ emails in seconds instead of minutes)
+  - Zero AI cost for template-based emails
+  - Falls back to AI if no template provided
+  - Database migration: `database-migrations/add-no-show-templates.sql`
+  - UI added to UploadWebinar page for template creation
+  - Edge Function updated to detect and use templates
+  - Full documentation: `NO-SHOW-TEMPLATES.md`
+
+## Previous Changes (October 19, 2025)
 - ✅ **Fixed Supabase Edge Function for email generation:**
   - Added database error checking for insert and update operations (previously failing silently)
   - Increased email word count validation limit from 550 to 800 words to accommodate conversational tone
