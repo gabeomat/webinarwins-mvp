@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Button from '../components/ui/Button'
 import Alert from '../components/ui/Alert'
+import RichTextEditor from '../components/ui/RichTextEditor'
 
 export default function WebinarDetail() {
   const { id } = useParams()
@@ -16,6 +17,9 @@ export default function WebinarDetail() {
   const [generatingEmails, setGeneratingEmails] = useState(false)
   const [emailFilter, setEmailFilter] = useState('all')
   const [editingEmail, setEditingEmail] = useState(null)
+  const [editingRecipient, setEditingRecipient] = useState('')
+  const [editingSubject, setEditingSubject] = useState('')
+  const [editingBody, setEditingBody] = useState('')
   const [showEmailSection, setShowEmailSection] = useState(false)
   const [showTemplatePreview, setShowTemplatePreview] = useState(false)
   const [testEmail, setTestEmail] = useState('')
@@ -582,9 +586,10 @@ export default function WebinarDetail() {
                       </div>
                       <div>
                         <label className="block text-xs font-black uppercase text-gray-700 mb-1">Email Body:</label>
-                        <div className="bg-gray-50 border border-gray-300 p-3 font-mono text-sm whitespace-pre-wrap">
-                          {getTemplatePreview().body}
-                        </div>
+                        <div 
+                          className="bg-gray-50 border border-gray-300 p-3 text-sm email-content"
+                          dangerouslySetInnerHTML={{ __html: getTemplatePreview().body }}
+                        />
                       </div>
                     </div>
 
@@ -805,8 +810,8 @@ export default function WebinarDetail() {
                                   </label>
                                   <input
                                     type="email"
-                                    defaultValue={email.attendees.email}
-                                    id={`recipient-${email.id}`}
+                                    value={editingRecipient}
+                                    onChange={(e) => setEditingRecipient(e.target.value)}
                                     className="w-full border-brutal border-brutal-black p-2 font-mono text-sm"
                                     placeholder="test@example.com"
                                   />
@@ -815,28 +820,25 @@ export default function WebinarDetail() {
                                   <label className="block text-xs font-black mb-1">SUBJECT:</label>
                                   <input
                                     type="text"
-                                    defaultValue={email.subject_line}
-                                    id={`subject-${email.id}`}
+                                    value={editingSubject}
+                                    onChange={(e) => setEditingSubject(e.target.value)}
                                     className="w-full border-brutal border-brutal-black p-2 font-bold"
                                   />
                                 </div>
                                 <div className="mb-3">
                                   <label className="block text-xs font-black mb-1">BODY:</label>
-                                  <textarea
-                                    defaultValue={email.email_body_text}
-                                    id={`body-${email.id}`}
-                                    rows="15"
-                                    className="w-full border-brutal border-brutal-black p-2 font-mono text-sm"
+                                  <RichTextEditor
+                                    value={editingBody}
+                                    onChange={setEditingBody}
+                                    placeholder="Email body..."
                                   />
                                 </div>
                                 <div className="flex gap-2">
                                   <Button
                                     onClick={() => {
-                                      const subject = document.getElementById(`subject-${email.id}`).value
-                                      const body = document.getElementById(`body-${email.id}`).value
                                       saveEmail(email.id, {
-                                        subject_line: subject,
-                                        email_body_text: body,
+                                        subject_line: editingSubject,
+                                        email_body_text: editingBody,
                                       })
                                     }}
                                     size="sm"
@@ -845,10 +847,7 @@ export default function WebinarDetail() {
                                   </Button>
                                   <Button
                                     onClick={() => {
-                                      const recipientEmail = document.getElementById(`recipient-${email.id}`).value
-                                      const subject = document.getElementById(`subject-${email.id}`).value
-                                      const body = document.getElementById(`body-${email.id}`).value
-                                      sendEmail(email.id, email.attendees.name, recipientEmail, subject, body)
+                                      sendEmail(email.id, email.attendees.name, editingRecipient, editingSubject, editingBody)
                                     }}
                                     size="sm"
                                     variant="secondary"
@@ -893,7 +892,12 @@ export default function WebinarDetail() {
                                       </Button>
                                     )}
                                     <Button
-                                      onClick={() => setEditingEmail(email.id)}
+                                      onClick={() => {
+                                        setEditingEmail(email.id)
+                                        setEditingRecipient(email.attendees.email)
+                                        setEditingSubject(email.subject_line)
+                                        setEditingBody(email.email_body_text)
+                                      }}
                                       variant="outline"
                                       size="sm"
                                     >
@@ -906,7 +910,10 @@ export default function WebinarDetail() {
                                   <span className="font-bold">{email.subject_line}</span>
                                 </div>
                                 <div className="bg-white border-brutal border-brutal-black p-3">
-                                  <pre className="text-sm whitespace-pre-wrap font-sans">{email.email_body_text}</pre>
+                                  <div 
+                                    className="text-sm email-content"
+                                    dangerouslySetInnerHTML={{ __html: email.email_body_text }}
+                                  />
                                 </div>
                               </>
                             )}

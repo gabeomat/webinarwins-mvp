@@ -6,6 +6,7 @@ import Papa from 'papaparse'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Alert from '../components/ui/Alert'
+import RichTextEditor from '../components/ui/RichTextEditor'
 
 export default function UploadWebinar() {
   const { user } = useAuth()
@@ -382,12 +383,10 @@ Here's to building the future ~
                   <label className="block text-sm font-black uppercase text-brutal-black mb-2">
                     Email Body Template
                   </label>
-                  <textarea
-                    name="noShowTemplateBody"
+                  <RichTextEditor
                     value={formData.noShowTemplateBody}
-                    onChange={handleInputChange}
-                    rows={12}
-                    className="w-full px-4 py-3 border-brutal border-brutal-black bg-white text-brutal-black font-bold focus:outline-none focus:ring-4 focus:ring-brutal-cyan font-mono text-sm"
+                    onChange={(value) => setFormData(prev => ({ ...prev, noShowTemplateBody: value }))}
+                    placeholder="Start typing your template..."
                   />
                   <p className="text-xs text-gray-600 mt-2">
                     ✨ Delete all text to use AI generation instead (costs more, takes longer)
