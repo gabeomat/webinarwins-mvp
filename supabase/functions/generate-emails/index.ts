@@ -547,7 +547,7 @@ function validateEmailContent(subject: string, body: string): boolean {
   }
 
   const wordCount = body.split(/\s+/).length
-  if (wordCount > 550 || wordCount < 50) {
+  if (wordCount > 800 || wordCount < 50) {
     return false
   }
 
