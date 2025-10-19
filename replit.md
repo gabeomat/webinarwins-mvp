@@ -37,6 +37,10 @@ WebinarWins is a React-based web application that helps webinar hosts automate p
   - Edge Function now properly reports database errors when saves fail
   - Email generation fully functional with proper error handling and validation
   - All fixes applied to `supabase/functions/generate-emails/index.ts` (must be manually deployed in Supabase dashboard)
+- ✅ **Fixed chat CSV upload:**
+  - Updated UploadWebinar.jsx to accept flexible column headers: `email` (lowercase) and `date & time` as alternatives
+  - Chat messages now properly save to database regardless of CSV header capitalization
+  - Supports both standard (`Email`, `Timestamp`) and custom (`email`, `date & time`) column naming
 
 ## Project Structure
 - **Frontend**: React + Vite application in `frontend/` directory
