@@ -120,3 +120,30 @@ Server runs on port 5000 and is accessible via the Replit webview.
 - The root directory contains duplicate files (src/, vite.config.js, etc.) that are not used
 - The actual working application is entirely in the `frontend/` directory
 - No backend server in this repository - uses Supabase as backend-as-a-service
+
+## Security Considerations for Future SaaS Deployment
+
+### HTML Sanitization
+⚠️ **IMPORTANT**: The application currently uses `dangerouslySetInnerHTML` to render rich text email content with HTML formatting (bold, italics, hyperlinks, etc.). 
+
+**For SaaS deployment with multiple users**, you must implement HTML sanitization to prevent XSS attacks:
+
+1. **Install a sanitization library**: Use a package like `DOMPurify` or `isomorphic-dompurify`
+   ```bash
+   npm install dompurify
+   npm install @types/dompurify --save-dev
+   ```
+
+2. **Sanitize before rendering**: Replace all `dangerouslySetInnerHTML` usage with sanitized HTML:
+   ```jsx
+   import DOMPurify from 'dompurify'
+   
+   <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(email.email_body_text) }} />
+   ```
+
+3. **Sanitize on save**: Optionally sanitize when users save emails (in addition to render-time)
+
+**Current Risk**: Users can inject malicious scripts in email templates/bodies
+**Future Mitigation**: HTML sanitization will strip potentially dangerous HTML/JS while preserving safe formatting (bold, links, etc.)
+
+This is documented for future reference - current single-user usage is safe.

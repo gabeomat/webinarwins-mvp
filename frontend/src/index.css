@@ -51,3 +51,51 @@ body {
   background: #FF006E;
 }
 
+/* Email content styling for rich text */
+.email-content {
+  line-height: 1.6;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.email-content p {
+  margin-bottom: 1em;
+}
+
+.email-content p:last-child {
+  margin-bottom: 0;
+}
+
+.email-content strong,
+.email-content b {
+  font-weight: 900;
+}
+
+.email-content em,
+.email-content i {
+  font-style: italic;
+}
+
+.email-content u {
+  text-decoration: underline;
+}
+
+.email-content a {
+  color: #0066cc;
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+.email-content a:hover {
+  color: #FF006E;
+}
+
+.email-content ul,
+.email-content ol {
+  margin: 0.5em 0;
+  padding-left: 2em;
+}
+
+.email-content li {
+  margin-bottom: 0.25em;
+}
+
