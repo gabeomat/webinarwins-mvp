@@ -99,3 +99,57 @@ body {
   margin-bottom: 0.25em;
 }
 
+/* Rich Text Editor (Quill) Neo-Brutalist Styling */
+.rich-text-editor .ql-container {
+  border: 4px solid black !important;
+  border-top: none !important;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+}
+
+.rich-text-editor .ql-toolbar {
+  border: 4px solid black !important;
+  border-bottom: none !important;
+  background: white;
+}
+
+.rich-text-editor .ql-editor {
+  min-height: 200px;
+  padding: 16px;
+}
+
+.rich-text-editor .ql-editor.ql-blank::before {
+  color: #9ca3af;
+  font-style: normal;
+}
+
+.rich-text-editor .ql-stroke {
+  stroke: black !important;
+}
+
+.rich-text-editor .ql-fill {
+  fill: black !important;
+}
+
+.rich-text-editor .ql-picker-label {
+  color: black !important;
+}
+
+.rich-text-editor .ql-toolbar button:hover,
+.rich-text-editor .ql-toolbar button:focus,
+.rich-text-editor .ql-toolbar button.ql-active {
+  background: #fef08a !important;
+}
+
+.rich-text-editor .ql-toolbar .ql-stroke:hover,
+.rich-text-editor .ql-toolbar button:hover .ql-stroke,
+.rich-text-editor .ql-toolbar button.ql-active .ql-stroke {
+  stroke: black !important;
+}
+
+.rich-text-editor .ql-toolbar .ql-fill:hover,
+.rich-text-editor .ql-toolbar button:hover .ql-fill,
+.rich-text-editor .ql-toolbar button.ql-active .ql-fill {
+  fill: black !important;
+}
+
