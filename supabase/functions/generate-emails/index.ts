@@ -232,8 +232,10 @@ IMPORTANT CONSTRAINTS:
 - Subject line + body format
 - Conversational tone throughout
 - Natural mention of fast action bonus (if applicable)
-- No placeholder text like [Your Name] or [Insert Details]
-- Make it sound human, not AI-generated`
+- CRITICAL: Absolutely NO placeholder text, brackets, or template markers anywhere ([Your Name], [Insert Details], [Name], etc.)
+- CRITICAL: Every email MUST end with exactly: "Warmly,\nGabriel" (no other signature, no variations)
+- Make it sound human, not AI-generated
+- This is the FINAL email, not a template - write complete, ready-to-send content`
 }
 
 function buildTierPrompt(attendee: any, webinar: any, chatContext: string): string {
