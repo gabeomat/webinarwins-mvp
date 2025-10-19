@@ -41,11 +41,14 @@ WebinarWins is a React-based web application that helps webinar hosts automate p
   - Updated UploadWebinar.jsx to accept flexible column headers: `email` (lowercase) and `date & time` as alternatives
   - Chat messages now properly save to database regardless of CSV header capitalization
   - Supports both standard (`Email`, `Timestamp`) and custom (`email`, `date & time`) column naming
-- 🚧 **Email sending feature (in progress):**
-  - Adding ability to send generated email drafts directly from the platform
-  - **Current approach**: Gmail integration for testing and initial use
-  - **Future scaling option**: Resend integration for tracking (opens, clicks, delivery) and better deliverability
-  - Will include "Send" button on email drafts and sent status tracking
+- ✅ **Email sending feature (ready for deployment):**
+  - Ability to send generated email drafts directly from the platform
+  - **Implementation**: Resend API for reliable delivery and email tracking (opens, clicks, delivery)
+  - ✅ Frontend Send button and sent status display implemented
+  - ✅ Database migration SQL created (`database-migrations/add-email-sent-tracking.sql`)
+  - ✅ Supabase Edge Function code written using Resend API (`supabase/functions/send-email/index.ts`)
+  - ⏳ **Deployment needed**: See `EMAIL-SENDING-SETUP.md` for complete setup instructions
+  - **Setup requires**: Resend API key (free tier: 3,000 emails/month) + Supabase Edge Function deployment
 
 ## Project Structure
 - **Frontend**: React + Vite application in `frontend/` directory

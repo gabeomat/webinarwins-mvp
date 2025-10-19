@@ -47,75 +47,52 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // Get Gmail access token from Replit Connectors
-    const hostname = Deno.env.get('CONNECTORS_HOSTNAME') || 'connectors.replit.com'
-    const xReplitToken = Deno.env.get('REPL_IDENTITY')
-
-    if (!xReplitToken) {
+    // Check if already sent
+    if (emailData.sent_status === 'sent') {
       return new Response(
-        JSON.stringify({ error: 'Gmail integration not available' }),
+        JSON.stringify({ error: 'Email already sent' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Send email via Resend API
+    const resendApiKey = Deno.env.get('RESEND_API_KEY')
+    const fromEmail = Deno.env.get('FROM_EMAIL') || 'onboarding@resend.dev'
+
+    if (!resendApiKey) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Email service not configured. Please add RESEND_API_KEY to Edge Function secrets.',
+          instructions: 'See EMAIL-SENDING-SETUP.md for setup instructions'
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const connectorResponse = await fetch(
-      `https://${hostname}/api/v2/connection?include_secrets=true&connector_names=google-mail`,
-      {
-        headers: {
-          'Accept': 'application/json',
-          'X_REPLIT_TOKEN': xReplitToken
-        }
-      }
-    )
-
-    const connectorData = await connectorResponse.json()
-    const connectionSettings = connectorData.items?.[0]
-    const accessToken = connectionSettings?.settings?.access_token || connectionSettings?.settings?.oauth?.credentials?.access_token
-
-    if (!accessToken) {
-      return new Response(
-        JSON.stringify({ error: 'Gmail not connected' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Send email via Gmail API
     const toEmail = emailData.attendees.email
     const subject = emailData.subject_line
     const body = emailData.email_body_text
 
-    const emailLines = [
-      `To: ${toEmail}`,
-      `Subject: ${subject}`,
-      'Content-Type: text/plain; charset="UTF-8"',
-      'MIME-Version: 1.0',
-      '',
-      body
-    ]
-    
-    const rawEmail = emailLines.join('\r\n')
-    const encodedEmail = btoa(rawEmail).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    const resendResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: [toEmail],
+        subject: subject,
+        text: body
+      })
+    })
 
-    const gmailResponse = await fetch(
-      'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          raw: encodedEmail
-        })
-      }
-    )
-
-    if (!gmailResponse.ok) {
-      const error = await gmailResponse.text()
-      throw new Error(`Gmail API error: ${error}`)
+    if (!resendResponse.ok) {
+      const error = await resendResponse.text()
+      throw new Error(`Resend API error: ${error}`)
     }
 
-    const gmailResult = await gmailResponse.json()
+    const resendResult = await resendResponse.json()
 
     // Update email status in database
     const { error: updateError } = await supabaseClient
@@ -128,12 +105,13 @@ Deno.serve(async (req: Request) => {
 
     if (updateError) {
       console.error('Failed to update email status:', updateError)
+      throw new Error(`Database update failed: ${updateError.message}`)
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        message_id: gmailResult.id,
+        message_id: resendResult.id,
         sent_to: toEmail
       }),
       {
