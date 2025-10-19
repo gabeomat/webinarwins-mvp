@@ -530,8 +530,24 @@ async function generateEmail(openai: OpenAI, attendee: any, webinar: any) {
   const content = response.choices[0].message.content || ''
   const parsed = parseAIResponse(content)
 
+  // Log the initial version before refinement
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+  console.log(`📧 INITIAL EMAIL (before style refinement) - ${attendee.name}`)
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+  console.log(`Subject: ${parsed.subject}`)
+  console.log(`\n${parsed.body}`)
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n')
+
   // Second pass: Refine with Gabriel's style
   const refined = await refineEmailStyle(openai, parsed.subject, parsed.body, attendee.name)
+
+  // Log the refined version
+  console.log('✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨')
+  console.log(`✨ REFINED EMAIL (Gabriel's voice) - ${attendee.name}`)
+  console.log('✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨')
+  console.log(`Subject: ${refined.subject}`)
+  console.log(`\n${refined.body}`)
+  console.log('✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨\n')
 
   return {
     subject: refined.subject,
@@ -555,6 +571,12 @@ async function generateEmail(openai: OpenAI, attendee: any, webinar: any) {
       },
       tokens_consumed: response.usage?.total_tokens || 0,
       temperature: 0.8,
+      style_refinement: {
+        initial_subject: parsed.subject,
+        initial_body_preview: parsed.body.substring(0, 200) + '...',
+        refined_subject: refined.subject,
+        refined_body_preview: refined.body.substring(0, 200) + '...',
+      },
     },
   }
 }
