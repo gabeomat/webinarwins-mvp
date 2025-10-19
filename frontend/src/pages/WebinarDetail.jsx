@@ -156,6 +156,26 @@ export default function WebinarDetail() {
     }
   }
 
+  const sendEmail = async (emailId, recipientName) => {
+    if (!confirm(`Send this email to ${recipientName}?`)) {
+      return
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: { email_id: emailId }
+      })
+
+      if (error) throw error
+
+      alert(`✅ Email sent successfully to ${recipientName}!`)
+      await fetchEmails()
+    } catch (error) {
+      console.error('Error sending email:', error)
+      alert(`❌ Failed to send email: ${error.message}`)
+    }
+  }
+
   const exportEmailsToCSV = () => {
     const filteredEmails = emailFilter === 'all'
       ? emails
@@ -596,13 +616,27 @@ export default function WebinarDetail() {
                                       )}
                                     </div>
                                   </div>
-                                  <Button
-                                    onClick={() => setEditingEmail(email.id)}
-                                    variant="outline"
-                                    size="sm"
-                                  >
-                                    EDIT
-                                  </Button>
+                                  <div className="flex gap-2">
+                                    {email.sent_status === 'sent' ? (
+                                      <span className="px-3 py-1 text-xs font-black bg-green-200 border-brutal border-brutal-black">
+                                        ✓ SENT {email.sent_at ? new Date(email.sent_at).toLocaleDateString() : ''}
+                                      </span>
+                                    ) : (
+                                      <Button
+                                        onClick={() => sendEmail(email.id, email.attendees.name)}
+                                        size="sm"
+                                      >
+                                        SEND
+                                      </Button>
+                                    )}
+                                    <Button
+                                      onClick={() => setEditingEmail(email.id)}
+                                      variant="outline"
+                                      size="sm"
+                                    >
+                                      EDIT
+                                    </Button>
+                                  </div>
                                 </div>
                                 <div className="mb-2">
                                   <span className="text-xs font-black text-gray-600">SUBJECT: </span>
