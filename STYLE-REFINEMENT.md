@@ -24,10 +24,18 @@ The second AI pass takes the initial email and rewrites it in Gabriel's authenti
 4. **Bold & Edgy Language** - Strategic use of profanity and blunt phrasing
 5. **Metaphorical & Playful** - Creative imagery and humor
 6. **Self-Aware & Reflective** - Shows mindset shifts and growth
-7. **Purposeful Structure** - Short paragraphs, natural breaks, scannable
+7. **Purposeful Structure** - Short paragraphs (1-3 sentences), natural breaks, scannable with visual breathing room
 8. **Invitational, not pushy** - Genuine calls to action
 
-**Output**: Same factual content, transformed into Gabriel's raw, authentic voice
+**Formatting Requirements:**
+- HTML output with `<p>` tags for each paragraph
+- Short, digestible paragraphs (1-3 sentences each)
+- `<strong>` tags for bold emphasis
+- `<a>` tags for links
+- Visual spacing between paragraphs for easy scanning
+- Signature: `<p>Warmly,<br>Gabriel</p>`
+
+**Output**: Same factual content, transformed into Gabriel's raw, authentic voice with HTML formatting
 
 ## Verification
 
@@ -42,7 +50,7 @@ To verify style refinement is working:
 
 ### What to Look For
 **Before (Initial)**: More formal, generic marketing language, longer paragraphs
-**After (Refined)**: Casual tone, short punchy paragraphs, bold language, personal feel
+**After (Refined)**: Casual tone, short scannable paragraphs (1-3 sentences each), bold language, personal feel, HTML formatting with `<p>` tags
 
 ## Technical Details
 
@@ -81,6 +89,7 @@ The AI response parser has been enhanced to handle various formatting issues:
 ✅ **User Approved** - Refined emails match Gabriel's authentic voice
 ✅ **Parser Robustness** - Handles markdown and various AI response formats
 ✅ **Fallback Protection** - Never fails completely, uses initial email if refinement has issues
+✅ **HTML Formatting** - Emails generated with short paragraphs (1-3 sentences) and proper HTML tags for easy scanning
 
 ## Maintenance
 The style guide is embedded directly in the Edge Function code. To update Gabriel's voice:
