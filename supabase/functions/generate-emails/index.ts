@@ -264,7 +264,7 @@ Warm with an edge. You're unafraid to call out outdated or "bro-marketing" nonse
 
 Invitational, not persuasive. You don't push or hype. You hold space, tell the truth, and let resonance do the work.
 
-Rhythmic and readable. Short lines. Natural breaks. Emphasis that feels like real conversation, not copywriting gymnastics.
+Rhythmic and readable. Short paragraphs (1-3 sentences). Natural breaks. Emphasis that feels like real conversation, not copywriting gymnastics. Easy to scan and digest.
 
 The goal: write emails that connect, not convince — where every word sounds like it came from a real person who's lived it, learned it, and is here to help others do the same.
 
@@ -279,13 +279,17 @@ After generating all 3 versions, select the version with the LOWEST probability 
 
 IMPORTANT CONSTRAINTS:
 - Maximum 500 words per email
-- Subject line + body format
+- Subject line + body format in HTML
+- Use <p> tags for paragraphs (1-3 sentences each)
+- Use <strong> for bold text, <a> for links
+- Short, scannable paragraphs with visual breathing room
 - Conversational tone throughout
 - Natural mention of fast action bonus (if applicable)
 - CRITICAL: Absolutely NO placeholder text, brackets, or template markers anywhere ([Your Name], [Insert Details], [Name], etc.)
-- CRITICAL: Every email MUST end with exactly: "Warmly,\nGabriel" (no other signature, no variations)
+- CRITICAL: Every email MUST end with exactly: "<p>Warmly,<br>Gabriel</p>" (no other signature, no variations)
 - Make it sound human, not AI-generated
-- This is the FINAL email, not a template - write complete, ready-to-send content`
+- This is the FINAL email, not a template - write complete, ready-to-send content
+- Output must be valid HTML with proper paragraph tags`
 }
 
 function buildTierPrompt(attendee: any, webinar: any, chatContext: string): string {
@@ -548,10 +552,14 @@ CRITICAL REQUIREMENTS:
 - Keep the core message and ALL specific details (webinar topic, offer details, chat references, etc.)
 - Maintain the greeting to ${attendeeName}
 - Rewrite in Gabriel's raw, conversational, edgy style
-- Use short paragraphs and natural breaks
+- Use short paragraphs (1-3 sentences max) with HTML <p> tags
+- Add blank lines between paragraphs for visual breathing room
+- Use HTML formatting: <strong> for bold, <a> for links
+- Make it easy to scan and read quickly
 - Add bold language where it feels authentic (you can swear if it fits)
 - Keep it concise and easy to skim
-- MUST end with exactly: "Warmly,\nGabriel"
+- MUST end with exactly: "<p>Warmly,<br>Gabriel</p>"
+- Output must be valid HTML with <p> tags for paragraphs
 - Maximum 500 words
 - NO placeholders or brackets anywhere
 
