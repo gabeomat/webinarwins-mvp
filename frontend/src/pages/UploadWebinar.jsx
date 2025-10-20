@@ -22,23 +22,7 @@ export default function UploadWebinar() {
     deadline: '',
     replayUrl: '',
     noShowTemplateSubject: '{name}, catch the replay + a special bonus (today only)',
-    noShowTemplateBody: `Hey {name},
-
-I noticed you registered for the training today, "How to Build a Client-Facing GPT - The Right Way" but you weren't able to make it live.
-
-If you're anything like me, your attention is being pulled in a million different directions so I totally get it. Thought you might appreciate the replay instead so you can watch at your convenience.
-
-I go into much more detail than the PDF guide you got, and I think what we cover in this is SUPER IMPORTANT when it comes to building custom GPTs that really feel like an extension of you, for your clients.
-
-You can catch the replay HERE {replay_url}
-
-Oh and I want to be sure you at least know about a special bonus if you decide to join us in our Skool community, Futureproof - The Evolution Lab **today only**... Access to the How to Build Your AI CMO (Chief Marketing Officer) trained on YOUR business intelligence bundle. This one alone has saved me sooooo much time in my own business so I'm sharing the instructions and the knowledge base docs with you.
-
-You can check out Futureproof HERE: https://www.skool.com/futureproof-the-evolution-lab
-
-Here's to building the future ~
-
-~ G`,
+    noShowTemplateBody: `<p>Hey {name},</p><p>I noticed you registered for the training today, "How to Build a Client-Facing GPT - The Right Way" but you weren't able to make it live.</p><p>If you're anything like me, your attention is being pulled in a million different directions so I totally get it. Thought you might appreciate the replay instead so you can watch at your convenience.</p><p>I go into much more detail than the PDF guide you got, and I think what we cover in this is SUPER IMPORTANT when it comes to building custom GPTs that really feel like an extension of you, for your clients.</p><p>You can catch the replay <a href="{replay_url}" target="_blank">HERE</a></p><p>Oh and I want to be sure you at least know about a special bonus if you decide to join us in our Skool community, Futureproof - The Evolution Lab <strong>today only</strong>... Access to the How to Build Your AI CMO (Chief Marketing Officer) trained on YOUR business intelligence bundle. This one alone has saved me sooooo much time in my own business so I'm sharing the instructions and the knowledge base docs with you.</p><p>You can check out Futureproof <a href="https://www.skool.com/futureproof-the-evolution-lab" target="_blank">HERE</a></p><p>Here's to building the future ~</p><p>~ G</p>`,
   })
   const [attendanceFile, setAttendanceFile] = useState(null)
   const [chatFile, setChatFile] = useState(null)

@@ -147,7 +147,7 @@ Deno.serve(async (req: Request) => {
             from: fromEmail,
             to: [attendee.email],
             subject: subject,
-            text: body
+            html: body
           })
         })
 
