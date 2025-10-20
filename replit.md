@@ -42,6 +42,7 @@ WebinarWins is a React-based web application that helps webinar hosts automate p
     - Generated email editor (WebinarDetail page)
   - HTML rendering properly displays formatted emails
   - Email content styling matches neo-brutalist theme
+  - **AI-generated emails**: GPT-4o-mini now generates emails with short paragraphs (1-3 sentences), proper HTML formatting, and visual spacing for easy scanning
   - **Security note**: For SaaS deployment, HTML sanitization (DOMPurify) must be implemented to prevent XSS attacks (see Security Considerations section)
 
 ## Previous Changes (October 19, 2025)
